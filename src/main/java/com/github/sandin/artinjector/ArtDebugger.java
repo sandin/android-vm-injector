@@ -58,7 +58,7 @@ public class ArtDebugger {
         arguments.get("port").setValue(String.valueOf(port));
         arguments.get("timeout").setValue(String.valueOf(timeout));
         for (Map.Entry<String, Connector.Argument> arg : arguments.entrySet()) {
-            System.out.println("Connection arguments: " + arg);
+            System.out.println("[x] JDWP Connection arguments: " + arg.getValue());
         }
 
         try {
@@ -72,6 +72,10 @@ public class ArtDebugger {
         }
 
         return mVirtualMachine != null;
+    }
+
+    public VirtualMachine getVirtualMachine() {
+        return mVirtualMachine;
     }
 
     /**
@@ -141,6 +145,7 @@ public class ArtDebugger {
     }
 
     private void startEventMonitorThread() {
+        System.out.println("[x] start event monitor thread");
         mEventMonitorThreadRunning = true;
         mEventMonitorThread = new Thread(new Runnable() {
             @Override
@@ -176,12 +181,14 @@ public class ArtDebugger {
 
                     }
                 }
+                System.out.println("[x] event monitor thread exit");
             }
         });
         mEventMonitorThread.start();
     }
 
     private void processMethodEntryEvent(MethodEntryEvent event) {
+        System.out.println("[x] on method entry event " + event + ", method=" + event.method());
         EvaluateContext ctx = new EvaluateContext(event.thread(), event.method());
 
         EventRequest eventRequest = event.request();
@@ -200,6 +207,7 @@ public class ArtDebugger {
     }
 
     private void stopEventMonitorThread(boolean waitForStop) {
+        System.out.println("[x] stop event monitor thread");
         mEventMonitorThreadRunning = false;
         if (mEventMonitorThread != null) {
             if (waitForStop) {

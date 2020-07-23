@@ -46,10 +46,15 @@ public class ArtInjector {
         if (device == null) {
             throw new ArtInjectException("Can not find device, serial=" + serial);
         }
+        System.out.println("[x] found device, serial=" + device.getSerialNumber());
         Client client = device.getClient(packageName);
         if (client == null) {
-            throw new ArtInjectException("Can not get client, make sure this application is debuggable, packageName=" + packageName);
+            throw new ArtInjectException("Can not get client, make sure this application is debuggable and is running, packageName=" + packageName);
         }
+        System.out.println("[x] found app, packageName=" + client.getClientData().getPackageName()
+                + ", pid=" + client.getClientData().getPid()
+                + ", abi=" + client.getClientData().getAbi()
+        );
 
         // Push so file into device
         final String soRemotePath;
@@ -58,6 +63,7 @@ public class ArtInjector {
         } catch (Throwable e) {
             throw new ArtInjectException("Can not push so file into device, packageName=" + packageName + ", soFile=" + soFile);
         }
+        System.out.println("[x] pushed so file into device, local file: " + soFile.getAbsolutePath() + ", remote file: " + soRemotePath);
 
         // Attach app as JDWP Debugger
         int port = client.getDebuggerListenPort();
@@ -66,10 +72,13 @@ public class ArtInjector {
         if (!attached) {
             throw new ArtInjectException("Can not attach to this app, packageName=" + packageName + ", host=localhost, port=" + port);
         }
+        System.out.println("[x] attached app as jdwp debugger, port=" + port + ", vm=" + artDebugger.getVirtualMachine().name()
+                + ", jdwp version=" + artDebugger.getVirtualMachine().version());
 
         // Create breakpoints
         for (String[] breakpoint : BREAKPOINTS) {
             artDebugger.addBreakpoint(new ArtDebugger.Breakpoint.Builder().className(breakpoint[0]).methodName(breakpoint[1]).build());
+            System.out.println("[x] added breakpoint: " + breakpoint[0] + "." + breakpoint[1]);
         }
 
         // Inject java code to load so
@@ -87,7 +96,8 @@ public class ArtInjector {
             }
         });
         try {
-            latch.wait(timeout);
+            System.out.println("[x] waiting for breakpoints");
+            latch.await(timeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignore) {
         }
         artDebugger.dispose();
@@ -151,7 +161,7 @@ public class ArtInjector {
 
         try {
             String cmd = String.join(" ", command);
-            System.out.println("adb shell " + cmd);
+            System.out.println("[x] adb shell " + cmd);
             device.executeShellCommand(cmd, receiver, 2L, TimeUnit.SECONDS);
         } catch (Exception var6) {
             return null;
@@ -177,6 +187,7 @@ public class ArtInjector {
         }
 
         device.pushFile(localFile.getAbsolutePath(), "/data/local/tmp/" + filename);
+        System.out.println("[x] isRoot: " + rooted);
         if (rooted) {
             adbShell(device, new String[]{"chmod", "777", remotePath});
 
