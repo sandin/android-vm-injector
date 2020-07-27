@@ -47,16 +47,9 @@ public class ArtInjector {
             throw new ArtInjectException("Can not find device, serial=" + serial);
         }
         System.out.println("[✔] found device, serial=" + device.getSerialNumber());
-        Client client = device.getClient(packageName);
+
+        Client client = findClient(device, packageName, timeout);
         if (client == null) {
-            Client[] clients = device.getClients();
-            for (Client c : clients) {
-                System.out.println(
-                        "[✔] debuggable app, packageName: "
-                                + c.getClientData().getPackageName()
-                                + ", debugger port: "
-                                + c.getDebuggerListenPort());
-            }
             throw new ArtInjectException(
                     "Can not get client, make sure this application is debuggable and is running, packageName="
                             + packageName);
@@ -162,8 +155,20 @@ public class ArtInjector {
             try {
                 // DdmPreferences.setDebugPortBase(9600);
                 // DdmPreferences.setSelectedDebugPort(9700);
+                AndroidDebugBridge.disconnectBridge();
+                AndroidDebugBridge.terminate();
+
                 AndroidDebugBridge.init(true, false, ImmutableMap.of());
                 mAndroidDebugBridge = AndroidDebugBridge.createBridge(mAdbPath, false);
+                while (!mAndroidDebugBridge.isConnected()) {
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(200);
+                    }
+                    catch (InterruptedException e) {
+                        // if cancelled, don't wait for connection and return immediately
+                        throw new ArtInjectException("Timed out attempting to connect to adb: " + mAdbPath);
+                    }
+                }
             } catch (Throwable e) {
                 throw new ArtInjectException("Can not create AndroidDebugBridget", e);
             }
@@ -201,6 +206,35 @@ public class ArtInjector {
         return targetDevice;
     }
 
+    private Client findClient(IDevice device, String packageName, long timeout) {
+        Client client = device.getClient(packageName);
+        long startTime = System.currentTimeMillis();
+        while (client == null) {
+            if (System.currentTimeMillis() - startTime > timeout) {
+                break;
+            }
+            Client[] clients = device.getClients();
+            System.out.println("---------------- " + clients.length);
+            for (Client c : clients) {
+                System.out.println(
+                        "[✔] debuggable app, packageName: "
+                                + c.getClientData().getPackageName()
+                                + ", debugger port: "
+                                + c.getDebuggerListenPort());
+                if (packageName.equals(c.getClientData().getClientDescription())) {
+                    client = c;
+                    break;
+                }
+            }
+            try {
+                TimeUnit.MILLISECONDS.sleep(200);
+            } catch (InterruptedException e) {
+
+            }
+        }
+        return client;
+    }
+
     private static String adbShell(IDevice device, String[] command) {
         CountDownLatch latch = new CountDownLatch(1);
         CollectingOutputReceiver receiver = new CollectingOutputReceiver(latch);
@@ -228,30 +262,24 @@ public class ArtInjector {
         String remoteDir = "/data/data/" + packageName + "/";
         String remotePath = remoteDir + filename;
 
+        /*
         boolean rooted = device.isRoot();
         if (!rooted) {
             rooted = device.root(); // try to get root permission
         }
+         */
 
         device.pushFile(localFile.getAbsolutePath(), "/data/local/tmp/" + filename);
-        System.out.println("[✔] isRoot: " + rooted);
-        if (rooted) {
-            adbShell(device, new String[] {"chmod", "777", remotePath});
+        System.out.println("[✔] isRoot: " + device.isRoot());
 
-            String[] cmd = new String[] {"cp", "/data/local/tmp/" + filename, remotePath};
-            String out = adbShell(device, cmd);
-            if (out.trim().length() > 0) {
-                throw new Exception(out.trim()); // error
-            }
-        } else {
-            String[] cmd =
-                    new String[] {
-                        "run-as", packageName, "cp", "/data/local/tmp/" + filename, remotePath
-                    };
-            String out = adbShell(device, cmd);
-            if (out.trim().length() > 0) {
-                throw new Exception(out.trim()); // error
-            }
+        //adbShell(device, new String[]{"run-as", packageName, "mkdir", remoteDir});
+        String[] cmd =
+                new String[] {
+                    "run-as", packageName, "cp", "/data/local/tmp/" + filename, remotePath
+                };
+        String out = adbShell(device, cmd);
+        if (out.trim().length() > 0) {
+            throw new Exception(out.trim()); // error
         }
         return remotePath;
     }

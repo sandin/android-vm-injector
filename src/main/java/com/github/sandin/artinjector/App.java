@@ -56,7 +56,8 @@ public class App {
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
 
-        String adbPath = "adb"; // TODO: adb path
+        // String adbPath = "adb"; // TODO: adb path
+        String adbPath = "d:\\tools\\android\\sdk\\platform-tools\\adb.exe"; // TODO: adb path
         File soFile = new File(injectSo);
         if (!soFile.exists()) {
             System.err.println(

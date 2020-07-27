@@ -127,7 +127,7 @@ public class ArtDebugger {
             }
         }
         System.out.println(
-                "[✔] try to invoke method: className"
+                "[✔] try to invoke method: className="
                         + className
                         + ", methodName="
                         + methodName
@@ -236,7 +236,7 @@ public class ArtDebugger {
     }
 
     private void processMethodEntryEvent(MethodEntryEvent event) {
-        System.out.println("[✔] on method entry event " + event + ", method=" + event.method());
+        //System.out.println("[✔] on method entry event " + event + ", method=" + event.method());
         EvaluateContext ctx = new EvaluateContext(event.thread(), event.method());
 
         EventRequest eventRequest = event.request();
