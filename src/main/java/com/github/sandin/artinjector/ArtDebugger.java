@@ -10,9 +10,7 @@ import com.sun.jdi.request.MethodEntryRequest;
 
 import java.util.*;
 
-/**
- * Debugger for Android VM (art and dalvik)
- */
+/** Debugger for Android VM (art and dalvik) */
 public class ArtDebugger {
 
     private VirtualMachine mVirtualMachine;
@@ -25,8 +23,7 @@ public class ArtDebugger {
     private Thread mEventMonitorThread = null;
     private volatile boolean mEventMonitorThreadRunning = false;
 
-    public ArtDebugger() {
-    }
+    public ArtDebugger() {}
 
     /**
      * Attach to a VM
@@ -58,7 +55,7 @@ public class ArtDebugger {
         arguments.get("port").setValue(String.valueOf(port));
         arguments.get("timeout").setValue(String.valueOf(timeout));
         for (Map.Entry<String, Connector.Argument> arg : arguments.entrySet()) {
-            System.out.println("[x] JDWP Connection arguments: " + arg.getValue());
+            System.out.println("[✔] JDWP Connection arguments: " + arg.getValue());
         }
 
         try {
@@ -78,9 +75,7 @@ public class ArtDebugger {
         return mVirtualMachine;
     }
 
-    /**
-     * Dispose
-     */
+    /** Dispose */
     public void dispose() {
         stopEventMonitorThread(false);
         if (mVirtualMachine != null) {
@@ -97,7 +92,8 @@ public class ArtDebugger {
      * @param args method args
      * @return result
      */
-    public EvaluateResult evaluateMethod(EvaluateContext evaluateContext, String className, String methodName, Object[] args) {
+    public EvaluateResult evaluateMethod(
+            EvaluateContext evaluateContext, String className, String methodName, Object[] args) {
         EvaluateResult result = new EvaluateResult();
 
         assertVirtualMachine();
@@ -108,7 +104,7 @@ public class ArtDebugger {
             result.setError("Can not find class " + className);
             return result;
         }
-        System.out.println("Found class: " + cls.name() + ", " + cls.classLoader());
+        System.out.println("[✔] Found class: " + cls.name() + ", " + cls.classLoader());
 
         List<Method> methods = cls.methodsByName(methodName);
         Method method = methods.size() > 0 ? methods.get(0) : null;
@@ -116,7 +112,7 @@ public class ArtDebugger {
             result.setError("Can not find method " + className + "." + methodName);
             return result;
         }
-        System.out.println("Found method: " + method.name() + " " + method.signature());
+        System.out.println("[✔] Found method: " + method.name() + " " + method.signature());
 
         List<Value> methodArgs = new ArrayList<>();
         int options = ClassType.INVOKE_SINGLE_THREADED;
@@ -126,17 +122,43 @@ public class ArtDebugger {
             } else if (arg instanceof Boolean) {
                 methodArgs.add(mVirtualMachine.mirrorOf((Boolean) arg));
             } else {
-                throw new IllegalArgumentException("unsupported args type: " + arg); // TODO: support other primitive type
+                throw new IllegalArgumentException(
+                        "unsupported args type: " + arg); // TODO: support other primitive type
             }
         }
-        System.out.println("invoke method: className" + className + ", methodName=" + methodName + ", args=" + args);
+        System.out.println(
+                "[✔] try to invoke method: className"
+                        + className
+                        + ", methodName="
+                        + methodName
+                        + ", args="
+                        + Arrays.toString(args));
         ThreadReference thread = evaluateContext.getThread();
+        if (!thread.isSuspended()) {
+            result.setError("Thread is not suspended!");
+            return result;
+        }
+
         Value invokeResult = null;
         try {
-            invokeResult = cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
+            invokeResult =
+                    cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
             result.setResult(invokeResult);
-            System.out.println("invoke method result: " + result + ", t=" + System.currentTimeMillis());
-        } catch (Throwable e) {
+            System.out.println(
+                    "[✔] invoke method result: " + result + ", t=" + System.currentTimeMillis());
+        } catch (InvocationException e) {
+            System.err.println("[❌] invoke method fail, exception: " + e);
+            ObjectReference exception = e.exception();
+            e.printStackTrace();
+            ArtInjectException remoteException = parseRemoteException(thread, exception);
+            result.setError(remoteException.getMessage());
+        } catch (ClassNotLoadedException e) {
+            e.printStackTrace();
+            result.setError(e.getMessage());
+        } catch (IncompatibleThreadStateException e) {
+            e.printStackTrace();
+            result.setError(e.getMessage());
+        } catch (InvalidTypeException e) {
             e.printStackTrace();
             result.setError(e.getMessage());
         }
@@ -144,56 +166,82 @@ public class ArtDebugger {
         return result;
     }
 
-    private void startEventMonitorThread() {
-        System.out.println("[x] start event monitor thread");
-        mEventMonitorThreadRunning = true;
-        mEventMonitorThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertVirtualMachine();
-                EventQueue eventQueue = mVirtualMachine.eventQueue();
-                boolean vmExit = false;
+    private ArtInjectException parseRemoteException(ThreadReference threadRef, ObjectReference remoteExceptionRef) {
+        String message = "";
 
-                while (mEventMonitorThreadRunning && !vmExit) {
-                    try {
-                        EventSet eventSet = eventQueue.remove();
-                        EventIterator eventIterator = eventSet.eventIterator();
-                        while (eventIterator.hasNext()) {
-                            com.sun.jdi.event.Event event = eventIterator.nextEvent();
-                            if (event instanceof VMDeathEvent) {
-                                vmExit = true;
-                            } else if (event instanceof VMDisconnectEvent) {
-                                vmExit = true;
-                            } else if (event instanceof MethodEntryEvent) {
-                                processMethodEntryEvent((MethodEntryEvent)event);
-                            } else if (event instanceof com.sun.jdi.event.BreakpointEvent) {
-                                processBreakpointEventEvent((com.sun.jdi.event.BreakpointEvent)event);
-                            }
-                            eventSet.resume();
-                        }
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                    }
+        ReferenceType type = remoteExceptionRef.referenceType();
+        message += type.name() + " ";
 
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException ignore) {
-
-                    }
-                }
-                System.out.println("[x] event monitor thread exit");
+        List<Method> methods = type.methodsByName("getMessage");
+        Method getMessageMethod = methods.size() > 0 ? methods.get(0) : null;
+        if (getMessageMethod != null) {
+            try {
+                List<Value> methodArgs = new ArrayList<>();
+                StringReference value = (StringReference) remoteExceptionRef.invokeMethod(threadRef, getMessageMethod, methodArgs, ClassType.INVOKE_SINGLE_THREADED);
+                message += value;
+            } catch (Throwable e) {
+                e.printStackTrace();
             }
-        });
+        }
+
+        return new ArtInjectException(message);
+    }
+
+    private void startEventMonitorThread() {
+        System.out.println("[✔] start event monitor thread");
+        mEventMonitorThreadRunning = true;
+        mEventMonitorThread =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                assertVirtualMachine();
+                                EventQueue eventQueue = mVirtualMachine.eventQueue();
+                                boolean vmExit = false;
+
+                                while (mEventMonitorThreadRunning && !vmExit) {
+                                    try {
+                                        EventSet eventSet = eventQueue.remove();
+                                        EventIterator eventIterator = eventSet.eventIterator();
+                                        while (eventIterator.hasNext()) {
+                                            com.sun.jdi.event.Event event =
+                                                    eventIterator.nextEvent();
+                                            if (event instanceof VMDeathEvent) {
+                                                vmExit = true;
+                                            } else if (event instanceof VMDisconnectEvent) {
+                                                vmExit = true;
+                                            } else if (event instanceof MethodEntryEvent) {
+                                                processMethodEntryEvent((MethodEntryEvent) event);
+                                            } else if (event
+                                                    instanceof com.sun.jdi.event.BreakpointEvent) {
+                                                processBreakpointEventEvent(
+                                                        (com.sun.jdi.event.BreakpointEvent) event);
+                                            }
+                                            eventSet.resume();
+                                        }
+                                    } catch (Throwable e) {
+                                        e.printStackTrace();
+                                    }
+
+                                    try {
+                                        Thread.sleep(100);
+                                    } catch (InterruptedException ignore) {
+
+                                    }
+                                }
+                                System.out.println("[✔] event monitor thread exit");
+                            }
+                        });
         mEventMonitorThread.start();
     }
 
     private void processMethodEntryEvent(MethodEntryEvent event) {
-        System.out.println("[x] on method entry event " + event + ", method=" + event.method());
+        System.out.println("[✔] on method entry event " + event + ", method=" + event.method());
         EvaluateContext ctx = new EvaluateContext(event.thread(), event.method());
 
         EventRequest eventRequest = event.request();
         if (mEventRequestMap.containsKey(eventRequest)) {
-            MethodBreakpoint breakpoint = (MethodBreakpoint)mEventRequestMap.get(eventRequest);
+            MethodBreakpoint breakpoint = (MethodBreakpoint) mEventRequestMap.get(eventRequest);
             Method method = event.method();
             if (method.name().equals(breakpoint.getMethodName())) {
                 BreakpointEvent breakpointEvent = new BreakpointEvent(ctx, breakpoint);
@@ -207,7 +255,7 @@ public class ArtDebugger {
     }
 
     private void stopEventMonitorThread(boolean waitForStop) {
-        System.out.println("[x] stop event monitor thread");
+        System.out.println("[✔] stop event monitor thread");
         mEventMonitorThreadRunning = false;
         if (mEventMonitorThread != null) {
             if (waitForStop) {
@@ -252,9 +300,7 @@ public class ArtDebugger {
         mBreakpoints.remove(breakpoint);
     }
 
-    /**
-     * Clear and disable all breakpoints
-     */
+    /** Clear and disable all breakpoints */
     public void clearBreakpoints() {
         assertVirtualMachine();
 
@@ -305,15 +351,13 @@ public class ArtDebugger {
     private static ClassType findClass(VirtualMachine vm, String className) {
         List<ReferenceType> classes = vm.classesByName(className);
         if (classes != null && classes.size() > 0) {
-            return (ClassType)classes.get(0);
+            return (ClassType) classes.get(0);
         }
         return null;
     }
 
-    /**
-     * Breakpoint
-     */
-    public static abstract class Breakpoint {
+    /** Breakpoint */
+    public abstract static class Breakpoint {
 
         protected boolean mEnabled;
         protected int mSuspendPolicy;
@@ -335,13 +379,15 @@ public class ArtDebugger {
         }
 
         public abstract boolean enable(VirtualMachine vm);
+
         public abstract boolean disable(VirtualMachine vm);
+
         public abstract EventRequest getEventRequest();
 
         public static class Builder {
             public String className;
             public String methodName;
-            public int suspendPolicy = EventRequest.SUSPEND_ALL;
+            public int suspendPolicy = EventRequest.SUSPEND_EVENT_THREAD;
 
             public Builder className(String className) {
                 this.className = className;
@@ -371,12 +417,9 @@ public class ArtDebugger {
                 return breakpoint;
             }
         }
-
     }
 
-    /**
-     * Breakpoint for method
-     */
+    /** Breakpoint for method */
     public static class MethodBreakpoint extends Breakpoint {
         private final String mClassName;
         private final String mMethodName;
@@ -431,13 +474,15 @@ public class ArtDebugger {
 
         @Override
         public String toString() {
-            return "[MethodBreakpoint] className=" + mClassName + ", methodName=" + mMethodName + "]";
+            return "[MethodBreakpoint] className="
+                    + mClassName
+                    + ", methodName="
+                    + mMethodName
+                    + "]";
         }
     }
 
-    /**
-     * Evaluate Context (which thread)
-     */
+    /** Evaluate Context (which thread) */
     public static class EvaluateContext {
 
         private ThreadReference mThread;
@@ -457,9 +502,7 @@ public class ArtDebugger {
         }
     }
 
-    /**
-     * Evaluate Result
-     */
+    /** Evaluate Result */
     public static class EvaluateResult {
         private Object mObject = null;
         private String mError = null;
@@ -481,10 +524,8 @@ public class ArtDebugger {
         }
     }
 
-    /**
-     * Debugger Event
-     */
-    public static abstract class Event {
+    /** Debugger Event */
+    public abstract static class Event {
 
         private EvaluateContext mEvaluateContext;
 
@@ -497,9 +538,7 @@ public class ArtDebugger {
         }
     }
 
-    /**
-     * Breakpoint Event
-     */
+    /** Breakpoint Event */
     public static class BreakpointEvent extends Event {
 
         private MethodBreakpoint mBreakpoint;
@@ -514,18 +553,15 @@ public class ArtDebugger {
         }
     }
 
-    /**
-     * Listener for Debugger Event
-     */
+    /** Listener for Debugger Event */
     public interface EventListener {
 
         /**
          * Event callback method
+         *
          * @param event which event
          * @return consumed or not
          */
         boolean onEvent(Event event);
-
     }
-
 }
