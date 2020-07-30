@@ -14,8 +14,7 @@ public class App {
     private static final String USAGE = "artinjector -i <injecto_so> -p <package_name>";
 
     public static void main(String[] args) {
-        System.out.println("[✔] Android VM Injector v1.0");
-
+        System.out.println("[Success] Android VM Injector v1.0");
         DefaultParser parser = new DefaultParser();
         Options options = new Options();
         options.addOption(
@@ -56,12 +55,13 @@ public class App {
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
 
-        // String adbPath = "adb"; // TODO: adb path
-        String adbPath = "d:\\tools\\android\\sdk\\platform-tools\\adb.exe"; // TODO: adb path
+        String adbPath = "d:\\adb\\adb.exe"; // TODO: adb path
+
         File soFile = new File(injectSo);
         if (!soFile.exists()) {
+            System.err.println("ErrorCode: " + ErrorCodes.SOFILE_NOT_EXIST);
             System.err.println(
-                    "[❌] Error: inject so file is not exists, " + soFile.getAbsolutePath());
+                    "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
             return;
         }
 
@@ -69,9 +69,9 @@ public class App {
             ArtInjector artInjector = new ArtInjector(adbPath);
             artInjector.inject(serial, packageName, soFile, 60 * 1000);
         } catch (ArtInjectException e) {
-            System.err.println("[❌] Error: " + e.getMessage());
+            System.err.println("[Error] ErrorInfo: " + e.getMessage());
             return;
         }
-        System.out.println("[✔] Inject: OK");
+        System.out.println("[Success] Inject: OK");
     }
 }

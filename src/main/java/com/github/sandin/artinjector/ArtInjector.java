@@ -8,16 +8,18 @@ import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/** Android VM Injector */
+/**
+ * Android VM Injector
+ */
 public class ArtInjector {
-    private static final String[] INVOKE_LOAD_METHOD = new String[] {"java.lang.System", "load"};
+    private static final String[] INVOKE_LOAD_METHOD = new String[]{"java.lang.System", "load"};
     private static final String[][] BREAKPOINTS =
-            new String[][] {
-                {
-                    "android.content.ContextWrapper", "attachBaseContext"
-                }, // for android.app.Application.attachBaseContext()
-                {"android.app.Activity", "onCreate"},
-                {"android.os.Looper", "myLooper"},
+            new String[][]{
+                    {
+                            "android.content.ContextWrapper", "attachBaseContext"
+                    }, // for android.app.Application.attachBaseContext()
+                    {"android.app.Activity", "onCreate"},
+                    {"android.os.Looper", "myLooper"},
             };
 
     private final String mAdbPath;
@@ -30,10 +32,10 @@ public class ArtInjector {
     /**
      * Inject a so file into target application
      *
-     * @param serial device's serial, null for first device
+     * @param serial      device's serial, null for first device
      * @param packageName package name of application
-     * @param soFile so file
-     * @param timeout wait timeout
+     * @param soFile      so file
+     * @param timeout     wait timeout
      * @return success/fail
      * @throws ArtInjectException
      */
@@ -44,18 +46,20 @@ public class ArtInjector {
         // Find device and client
         IDevice device = findDevice(serial, timeout);
         if (device == null) {
+            System.err.println("ErrorCode: " + ErrorCodes.CANT_FIND_DEVICE);
             throw new ArtInjectException("Can not find device, serial=" + serial);
         }
-        System.out.println("[✔] found device, serial=" + device.getSerialNumber());
+        System.out.println("[Success] found device, serial=" + device.getSerialNumber());
 
         Client client = findClient(device, packageName, timeout);
         if (client == null) {
+            System.err.println("ErrorCode: " + ErrorCodes.CANT_GET_CLIENT);
             throw new ArtInjectException(
                     "Can not get client, make sure this application is debuggable and is running, packageName="
                             + packageName);
         }
         System.out.println(
-                "[✔] found app, packageName="
+                "[Success] found app, packageName="
                         + client.getClientData().getPackageName()
                         + ", pid="
                         + client.getClientData().getPid()
@@ -67,6 +71,7 @@ public class ArtInjector {
         try {
             soRemotePath = pushFileIntoDevice(device, packageName, soFile);
         } catch (Throwable e) {
+            System.err.println("ErrorCode: " + ErrorCodes.CANT_PUSH_FILE);
             throw new ArtInjectException(
                     "Can not push so file into device, packageName="
                             + packageName
@@ -74,7 +79,7 @@ public class ArtInjector {
                             + soFile);
         }
         System.out.println(
-                "[✔] pushed so file into device, local file: "
+                "[Success] pushed so file into device, local file: "
                         + soFile.getAbsolutePath()
                         + ", remote file: "
                         + soRemotePath);
@@ -84,6 +89,7 @@ public class ArtInjector {
         final ArtDebugger artDebugger = new ArtDebugger();
         boolean attached = artDebugger.attach("localhost", port, timeout);
         if (!attached) {
+            System.err.println("ErrorCode: " + ErrorCodes.CANT_ATTACH_APP);
             throw new ArtInjectException(
                     "Can not attach to this app, packageName="
                             + packageName
@@ -91,7 +97,7 @@ public class ArtInjector {
                             + port);
         }
         System.out.println(
-                "[✔] attached app as jdwp debugger, port="
+                "[Success] attached app as jdwp debugger, port="
                         + port
                         + ", vm="
                         + artDebugger.getVirtualMachine().name()
@@ -105,7 +111,7 @@ public class ArtInjector {
                             .className(breakpoint[0])
                             .methodName(breakpoint[1])
                             .build());
-            System.out.println("[✔] added breakpoint: " + breakpoint[0] + "." + breakpoint[1]);
+            System.out.println("[Success] added breakpoint: " + breakpoint[0] + "." + breakpoint[1]);
         }
 
         // Inject java code to load so
@@ -123,7 +129,7 @@ public class ArtInjector {
                                             event.getEvaluateContext(),
                                             INVOKE_LOAD_METHOD[0],
                                             INVOKE_LOAD_METHOD[1],
-                                            new Object[] {soRemotePath});
+                                            new Object[]{soRemotePath});
                             latch.countDown();
                             return true;
                         }
@@ -131,7 +137,7 @@ public class ArtInjector {
                     }
                 });
         try {
-            System.out.println("[✔] waiting for breakpoints");
+            System.out.println("[Success] waiting for breakpoints");
             latch.await(timeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignore) {
         }
@@ -140,10 +146,17 @@ public class ArtInjector {
         // Get the result
         ArtDebugger.EvaluateResult result = future[0];
         if (result == null) {
+            System.err.println("ErrorCode: " + ErrorCodes.BREAKPOINT_TIMEOUT);
             throw new ArtInjectException(
                     "Breakpoint timeout, breakpoints=" + artDebugger.getBreakpoints());
         }
         if (result.getError() != null) {
+            String errorMessage = result.getError();
+            String tips = errorMessage.substring(errorMessage.lastIndexOf(" ") + 1, errorMessage.length() - 1);
+            if (tips.equals("32-bit"))
+                System.err.println("ErrorCode: " + ErrorCodes.SOFILE_SHOULD_USE_32BIT);
+            else if (tips.equals("64-bit"))
+                System.err.println("ErrorCode: " + ErrorCodes.SOFILE_SHOULD_USE_64BIT);
             throw new ArtInjectException(
                     "Evaluate java code throw exception, error=" + result.getError());
         }
@@ -157,19 +170,19 @@ public class ArtInjector {
                 // DdmPreferences.setSelectedDebugPort(9700);
                 AndroidDebugBridge.disconnectBridge();
                 AndroidDebugBridge.terminate();
-
                 AndroidDebugBridge.init(true, false, ImmutableMap.of());
+
                 mAndroidDebugBridge = AndroidDebugBridge.createBridge(mAdbPath, false);
                 while (!mAndroidDebugBridge.isConnected()) {
                     try {
                         TimeUnit.MILLISECONDS.sleep(200);
-                    }
-                    catch (InterruptedException e) {
+                    } catch (InterruptedException e) {
                         // if cancelled, don't wait for connection and return immediately
                         throw new ArtInjectException("Timed out attempting to connect to adb: " + mAdbPath);
                     }
                 }
             } catch (Throwable e) {
+                System.out.println(mAdbPath);
                 throw new ArtInjectException("Can not create AndroidDebugBridget", e);
             }
         }
@@ -217,7 +230,7 @@ public class ArtInjector {
             System.out.println("---------------- " + clients.length);
             for (Client c : clients) {
                 System.out.println(
-                        "[✔] debuggable app, packageName: "
+                        "[Success] debuggable app, packageName: "
                                 + c.getClientData().getPackageName()
                                 + ", debugger port: "
                                 + c.getDebuggerListenPort());
@@ -241,7 +254,7 @@ public class ArtInjector {
 
         try {
             String cmd = String.join(" ", command);
-            System.out.println("[✔] adb shell " + cmd);
+            System.out.println("[Success] adb shell " + cmd);
             device.executeShellCommand(cmd, receiver, 2L, TimeUnit.SECONDS);
         } catch (Exception var6) {
             return null;
@@ -270,12 +283,12 @@ public class ArtInjector {
          */
 
         device.pushFile(localFile.getAbsolutePath(), "/data/local/tmp/" + filename);
-        System.out.println("[✔] isRoot: " + device.isRoot());
+        System.out.println("[Success] isRoot: " + device.isRoot());
 
         //adbShell(device, new String[]{"run-as", packageName, "mkdir", remoteDir});
         String[] cmd =
-                new String[] {
-                    "run-as", packageName, "cp", "/data/local/tmp/" + filename, remotePath
+                new String[]{
+                        "run-as", packageName, "cp", "/data/local/tmp/" + filename, remotePath
                 };
         String out = adbShell(device, cmd);
         if (out.trim().length() > 0) {

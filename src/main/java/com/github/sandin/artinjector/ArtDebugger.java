@@ -55,7 +55,7 @@ public class ArtDebugger {
         arguments.get("port").setValue(String.valueOf(port));
         arguments.get("timeout").setValue(String.valueOf(timeout));
         for (Map.Entry<String, Connector.Argument> arg : arguments.entrySet()) {
-            System.out.println("[✔] JDWP Connection arguments: " + arg.getValue());
+            System.out.println("[Success] JDWP Connection arguments: " + arg.getValue());
         }
 
         try {
@@ -104,7 +104,7 @@ public class ArtDebugger {
             result.setError("Can not find class " + className);
             return result;
         }
-        System.out.println("[✔] Found class: " + cls.name() + ", " + cls.classLoader());
+        System.out.println("[Success] Found class: " + cls.name() + ", " + cls.classLoader());
 
         List<Method> methods = cls.methodsByName(methodName);
         Method method = methods.size() > 0 ? methods.get(0) : null;
@@ -112,7 +112,7 @@ public class ArtDebugger {
             result.setError("Can not find method " + className + "." + methodName);
             return result;
         }
-        System.out.println("[✔] Found method: " + method.name() + " " + method.signature());
+        System.out.println("[Success] Found method: " + method.name() + " " + method.signature());
 
         List<Value> methodArgs = new ArrayList<>();
         int options = ClassType.INVOKE_SINGLE_THREADED;
@@ -127,7 +127,7 @@ public class ArtDebugger {
             }
         }
         System.out.println(
-                "[✔] try to invoke method: className="
+                "[Success] try to invoke method: className="
                         + className
                         + ", methodName="
                         + methodName
@@ -145,9 +145,9 @@ public class ArtDebugger {
                     cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
             result.setResult(invokeResult);
             System.out.println(
-                    "[✔] invoke method result: " + result + ", t=" + System.currentTimeMillis());
+                    "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
         } catch (InvocationException e) {
-            System.err.println("[❌] invoke method fail, exception: " + e);
+            System.err.println("[Error] invoke method fail, exception: " + e);
             ObjectReference exception = e.exception();
             e.printStackTrace();
             ArtInjectException remoteException = parseRemoteException(thread, exception);
@@ -188,7 +188,7 @@ public class ArtDebugger {
     }
 
     private void startEventMonitorThread() {
-        System.out.println("[✔] start event monitor thread");
+        System.out.println("[Success] start event monitor thread");
         mEventMonitorThreadRunning = true;
         mEventMonitorThread =
                 new Thread(
@@ -229,7 +229,7 @@ public class ArtDebugger {
 
                                     }
                                 }
-                                System.out.println("[✔] event monitor thread exit");
+                                System.out.println("[Success] event monitor thread exit");
                             }
                         });
         mEventMonitorThread.start();
@@ -255,7 +255,7 @@ public class ArtDebugger {
     }
 
     private void stopEventMonitorThread(boolean waitForStop) {
-        System.out.println("[✔] stop event monitor thread");
+        System.out.println("[Success] stop event monitor thread");
         mEventMonitorThreadRunning = false;
         if (mEventMonitorThread != null) {
             if (waitForStop) {
