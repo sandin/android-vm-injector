@@ -2,8 +2,14 @@
 
 ## Usage
 
+### .so注入 
 ```
 $ artinjector -i <injecto_so> -p <package_name>
+```
+
+### 检测app架构(32/64 bit)
+```
+$ artinjector -p <package_name> -a
 ```
 
 ## ErrorCodes

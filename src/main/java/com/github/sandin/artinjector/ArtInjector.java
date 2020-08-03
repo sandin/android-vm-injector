@@ -303,7 +303,7 @@ public class ArtInjector {
         AndroidDebugBridge.terminate();
     }
 
-    public String getAppAbi(String serial, String packageName, long timeout) throws ArtInjectException{
+    public String getAppAbi(String serial, String packageName, long timeout) throws ArtInjectException {
         ensureAndroidDebugBridge();
 
         // Find device and client
