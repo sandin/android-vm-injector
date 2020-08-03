@@ -4,6 +4,7 @@ import com.android.ddmlib.*;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jdi.ThreadReference;
 
+import javax.print.DocFlavor;
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,14 +47,14 @@ public class ArtInjector {
         // Find device and client
         IDevice device = findDevice(serial, timeout);
         if (device == null) {
-            System.err.println("ErrorCode: " + ErrorCodes.CANT_FIND_DEVICE);
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_FIND_DEVICE);
             throw new ArtInjectException("Can not find device, serial=" + serial);
         }
         System.out.println("[Success] found device, serial=" + device.getSerialNumber());
 
         Client client = findClient(device, packageName, timeout);
         if (client == null) {
-            System.err.println("ErrorCode: " + ErrorCodes.CANT_GET_CLIENT);
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_GET_CLIENT);
             throw new ArtInjectException(
                     "Can not get client, make sure this application is debuggable and is running, packageName="
                             + packageName);
@@ -71,7 +72,7 @@ public class ArtInjector {
         try {
             soRemotePath = pushFileIntoDevice(device, packageName, soFile);
         } catch (Throwable e) {
-            System.err.println("ErrorCode: " + ErrorCodes.CANT_PUSH_FILE);
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_PUSH_FILE);
             throw new ArtInjectException(
                     "Can not push so file into device, packageName="
                             + packageName
@@ -89,7 +90,7 @@ public class ArtInjector {
         final ArtDebugger artDebugger = new ArtDebugger();
         boolean attached = artDebugger.attach("localhost", port, timeout);
         if (!attached) {
-            System.err.println("ErrorCode: " + ErrorCodes.CANT_ATTACH_APP);
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_ATTACH_APP);
             throw new ArtInjectException(
                     "Can not attach to this app, packageName="
                             + packageName
@@ -146,7 +147,7 @@ public class ArtInjector {
         // Get the result
         ArtDebugger.EvaluateResult result = future[0];
         if (result == null) {
-            System.err.println("ErrorCode: " + ErrorCodes.BREAKPOINT_TIMEOUT);
+            System.out.println("[ErrorCode]: " + ErrorCodes.BREAKPOINT_TIMEOUT);
             throw new ArtInjectException(
                     "Breakpoint timeout, breakpoints=" + artDebugger.getBreakpoints());
         }
@@ -154,9 +155,9 @@ public class ArtInjector {
             String errorMessage = result.getError();
             String tips = errorMessage.substring(errorMessage.lastIndexOf(" ") + 1, errorMessage.length() - 1);
             if (tips.equals("32-bit"))
-                System.err.println("ErrorCode: " + ErrorCodes.SOFILE_SHOULD_USE_32BIT);
+                System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_SHOULD_USE_32BIT);
             else if (tips.equals("64-bit"))
-                System.err.println("ErrorCode: " + ErrorCodes.SOFILE_SHOULD_USE_64BIT);
+                System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_SHOULD_USE_64BIT);
             throw new ArtInjectException(
                     "Evaluate java code throw exception, error=" + result.getError());
         }
@@ -296,4 +297,32 @@ public class ArtInjector {
         }
         return remotePath;
     }
+
+    public void dispose() {
+        AndroidDebugBridge.disconnectBridge();
+        AndroidDebugBridge.terminate();
+    }
+
+    public String getAppAbi(String serial, String packageName, long timeout) throws ArtInjectException{
+        ensureAndroidDebugBridge();
+
+        // Find device and client
+        IDevice device = findDevice(serial, timeout);
+        if (device == null) {
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_FIND_DEVICE);
+            throw new ArtInjectException("Can not find device, serial=" + serial);
+        }
+        System.out.println("[Success] found device, serial=" + device.getSerialNumber());
+
+        Client client = findClient(device, packageName, timeout);
+        if (client == null) {
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_GET_CLIENT);
+            throw new ArtInjectException(
+                    "Can not get client, make sure this application is debuggable and is running, packageName="
+                            + packageName);
+        }
+        return client.getClientData().getAbi();
+    }
+
+
 }

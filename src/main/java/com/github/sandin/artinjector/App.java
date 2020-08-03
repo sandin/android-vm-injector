@@ -31,7 +31,7 @@ public class App {
                         .argName("injectso")
                         .desc("inject so")
                         .hasArg(true)
-                        .required(true)
+                        .required(false)
                         .build());
         options.addOption(
                 Option.builder("s")
@@ -39,6 +39,14 @@ public class App {
                         .argName("serial")
                         .desc("device serial")
                         .hasArg(true)
+                        .required(false)
+                        .build());
+        options.addOption(
+                Option.builder("a")
+                        .longOpt("abi")
+                        .argName("abi")
+                        .desc("application abi")
+                        .hasArg(false)
                         .required(false)
                         .build());
         CommandLine cl;
@@ -51,27 +59,43 @@ public class App {
             return;
         }
 
+        String adbPath = "adb"; //TODO
+        //String adbPath = "d:\\adb\\adb.exe"; // TODO: adb path
+
+
         String packageName = cl.getOptionValue("package");
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
+        ArtInjector artInjector = new ArtInjector(adbPath);
+        if (cl.hasOption("a")) {
+            try {
+                String appAbi = artInjector.getAppAbi(serial, packageName, 60 * 1000);
+                System.out.println("[Success] Application abi is : " + appAbi);
+            } catch (ArtInjectException e) {
+                System.err.println("[Error] ErrorInfo: " + e.getMessage());
+                System.exit(-1);
+            } finally {
+                System.exit(0);
+            }
+        }
 
-        String adbPath = "d:\\adb\\adb.exe"; // TODO: adb path
 
         File soFile = new File(injectSo);
         if (!soFile.exists()) {
-            System.err.println("ErrorCode: " + ErrorCodes.SOFILE_NOT_EXIST);
+            System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
             System.err.println(
                     "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
             return;
         }
-
         try {
-            ArtInjector artInjector = new ArtInjector(adbPath);
             artInjector.inject(serial, packageName, soFile, 60 * 1000);
         } catch (ArtInjectException e) {
             System.err.println("[Error] ErrorInfo: " + e.getMessage());
+            System.exit(-1);
             return;
         }
+        //artInjector.dispose();
         System.out.println("[Success] Inject: OK");
+        System.exit(0);
     }
 }
