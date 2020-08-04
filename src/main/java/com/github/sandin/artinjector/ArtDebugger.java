@@ -10,7 +10,9 @@ import com.sun.jdi.request.MethodEntryRequest;
 
 import java.util.*;
 
-/** Debugger for Android VM (art and dalvik) */
+/**
+ * Debugger for Android VM (art and dalvik)
+ */
 public class ArtDebugger {
 
     private VirtualMachine mVirtualMachine;
@@ -23,14 +25,15 @@ public class ArtDebugger {
     private Thread mEventMonitorThread = null;
     private volatile boolean mEventMonitorThreadRunning = false;
 
-    public ArtDebugger() {}
+    public ArtDebugger() {
+    }
 
     /**
      * Attach to a VM
      *
      * @param hostName vm hostname
-     * @param port vm debugger port
-     * @param timeout wait timeout
+     * @param port     vm debugger port
+     * @param timeout  wait timeout
      * @return success/fail
      */
     public boolean attach(String hostName, int port, long timeout) {
@@ -75,7 +78,9 @@ public class ArtDebugger {
         return mVirtualMachine;
     }
 
-    /** Dispose */
+    /**
+     * Dispose
+     */
     public void dispose() {
         stopEventMonitorThread(false);
         if (mVirtualMachine != null) {
@@ -87,9 +92,9 @@ public class ArtDebugger {
      * Invoke a method in remote VM
      *
      * @param evaluateContext context(thread)
-     * @param className class name
-     * @param methodName method name
-     * @param args method args
+     * @param className       class name
+     * @param methodName      method name
+     * @param args            method args
      * @return result
      */
     public EvaluateResult evaluateMethod(
@@ -147,6 +152,7 @@ public class ArtDebugger {
             System.out.println(
                     "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
         } catch (InvocationException e) {
+            System.out.println("[ErrorCode]: " + ErrorCodes.LOAD_SO_FAIL);
             System.err.println("[Error] invoke method fail, exception: " + e);
             ObjectReference exception = e.exception();
             e.printStackTrace();
@@ -300,7 +306,9 @@ public class ArtDebugger {
         mBreakpoints.remove(breakpoint);
     }
 
-    /** Clear and disable all breakpoints */
+    /**
+     * Clear and disable all breakpoints
+     */
     public void clearBreakpoints() {
         assertVirtualMachine();
 
@@ -356,7 +364,9 @@ public class ArtDebugger {
         return null;
     }
 
-    /** Breakpoint */
+    /**
+     * Breakpoint
+     */
     public abstract static class Breakpoint {
 
         protected boolean mEnabled;
@@ -419,7 +429,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Breakpoint for method */
+    /**
+     * Breakpoint for method
+     */
     public static class MethodBreakpoint extends Breakpoint {
         private final String mClassName;
         private final String mMethodName;
@@ -482,7 +494,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Evaluate Context (which thread) */
+    /**
+     * Evaluate Context (which thread)
+     */
     public static class EvaluateContext {
 
         private ThreadReference mThread;
@@ -502,7 +516,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Evaluate Result */
+    /**
+     * Evaluate Result
+     */
     public static class EvaluateResult {
         private Object mObject = null;
         private String mError = null;
@@ -524,7 +540,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Debugger Event */
+    /**
+     * Debugger Event
+     */
     public abstract static class Event {
 
         private EvaluateContext mEvaluateContext;
@@ -538,7 +556,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Breakpoint Event */
+    /**
+     * Breakpoint Event
+     */
     public static class BreakpointEvent extends Event {
 
         private MethodBreakpoint mBreakpoint;
@@ -553,7 +573,9 @@ public class ArtDebugger {
         }
     }
 
-    /** Listener for Debugger Event */
+    /**
+     * Listener for Debugger Event
+     */
     public interface EventListener {
 
         /**

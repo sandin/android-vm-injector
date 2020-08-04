@@ -306,6 +306,7 @@ public class ArtInjector {
     public String getAppAbi(String serial, String packageName, long timeout) throws ArtInjectException {
         ensureAndroidDebugBridge();
 
+
         // Find device and client
         IDevice device = findDevice(serial, timeout);
         if (device == null) {

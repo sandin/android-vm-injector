@@ -11,7 +11,8 @@ import java.io.File;
  */
 public class App {
 
-    private static final String USAGE = "artinjector -i <injecto_so> -p <package_name>";
+    private static final String USAGE_INJECT = "artinjector -i <injecto_so> -p <package_name>";
+    private static final String USAGE_GETABI = "artinjector -p <package_name> -a";
 
     public static void main(String[] args) {
         System.out.println("[Success] Android VM Injector v1.0");
@@ -54,10 +55,11 @@ public class App {
             cl = parser.parse(options, args);
         } catch (ParseException e) {
             HelpFormatter hf = new HelpFormatter();
-            hf.printHelp(USAGE, options);
+            hf.printHelp(USAGE_INJECT+"\n or \n"+USAGE_GETABI, options);
             System.exit(-1);
             return;
         }
+
 
         String adbPath = "adb"; //TODO
         //String adbPath = "d:\\adb\\adb.exe"; // TODO: adb path
@@ -74,28 +76,25 @@ public class App {
             } catch (ArtInjectException e) {
                 System.err.println("[Error] ErrorInfo: " + e.getMessage());
                 System.exit(-1);
-            } finally {
-                System.exit(0);
             }
+        } else {
+            File soFile = new File(injectSo);
+            if (!soFile.exists()) {
+                System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
+                System.err.println(
+                        "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
+                return;
+            }
+            try {
+                artInjector.inject(serial, packageName, soFile, 60 * 1000);
+            } catch (
+                    ArtInjectException e) {
+                System.err.println("[Error] ErrorInfo: " + e.getMessage());
+                System.exit(-1);
+            }
+            //artInjector.dispose();
+            System.out.println("[Success] Inject: OK");
         }
-
-
-        File soFile = new File(injectSo);
-        if (!soFile.exists()) {
-            System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
-            System.err.println(
-                    "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
-            return;
-        }
-        try {
-            artInjector.inject(serial, packageName, soFile, 60 * 1000);
-        } catch (ArtInjectException e) {
-            System.err.println("[Error] ErrorInfo: " + e.getMessage());
-            System.exit(-1);
-            return;
-        }
-        //artInjector.dispose();
-        System.out.println("[Success] Inject: OK");
         System.exit(0);
     }
 }
