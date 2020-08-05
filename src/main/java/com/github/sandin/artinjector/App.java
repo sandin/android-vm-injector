@@ -55,7 +55,7 @@ public class App {
             cl = parser.parse(options, args);
         } catch (ParseException e) {
             HelpFormatter hf = new HelpFormatter();
-            hf.printHelp(USAGE_INJECT+"\n or \n"+USAGE_GETABI, options);
+            hf.printHelp(USAGE_INJECT + "\n or \n" + USAGE_GETABI, options);
             System.exit(-1);
             return;
         }
@@ -78,6 +78,11 @@ public class App {
                 System.exit(-1);
             }
         } else {
+            if (!cl.hasOption("i")) {
+                HelpFormatter hf = new HelpFormatter();
+                hf.printHelp(USAGE_INJECT, options);
+                System.exit(-1);
+            }
             File soFile = new File(injectSo);
             if (!soFile.exists()) {
                 System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);

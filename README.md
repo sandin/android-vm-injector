@@ -23,6 +23,7 @@ CANT_ATTACH_APP = 5;		    //无法连接应用
 BREAKPOINT_TIMEOUT = 6; 	    //断点超时
 SOFILE_SHOULD_USE_32BIT = 7;    //应用为32位，使用了64位的.so
 SOFILE_SHOULD_USE_64BIT = 8;    //应用为64位，使用了32位的.so
+LOAD_SO_FAIL = 9;               //拉起so失败
 ```
 
 ## Tips
