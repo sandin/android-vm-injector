@@ -50,6 +50,23 @@ public class App {
                         .hasArg(false)
                         .required(false)
                         .build());
+        options.addOption(
+                Option.builder("l")
+                        .longOpt("launch")
+                        .argName("launch")
+                        .desc("launch application")
+                        .hasArg(false)
+                        .required(false)
+                        .build());
+        options.addOption(
+                Option.builder("ac")
+                        .longOpt("activity")
+                        .argName("activityName")
+                        .desc("activity name")
+                        .hasArg(true)
+                        .required(false)
+                        .build());
+
         CommandLine cl;
         try {
             cl = parser.parse(options, args);
@@ -68,6 +85,8 @@ public class App {
         String packageName = cl.getOptionValue("package");
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
+        String activityName = cl.getOptionValue("ac");
+        Boolean needLaunch = false;
         ArtInjector artInjector = new ArtInjector(adbPath);
         if (cl.hasOption("a")) {
             try {
@@ -90,8 +109,11 @@ public class App {
                         "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
                 return;
             }
+            if (cl.hasOption("l")) {
+                needLaunch = true;
+            }
             try {
-                artInjector.inject(serial, packageName, soFile, 60 * 1000);
+                artInjector.inject(serial, packageName, soFile, 60 * 1000, needLaunch, activityName);
             } catch (
                     ArtInjectException e) {
                 System.err.println("[Error] ErrorInfo: " + e.getMessage());

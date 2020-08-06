@@ -40,7 +40,7 @@ public class ArtInjector {
      * @return success/fail
      * @throws ArtInjectException
      */
-    public boolean inject(String serial, String packageName, File soFile, long timeout)
+    public boolean inject(String serial, String packageName, File soFile, long timeout, Boolean isLaunch, String activityName)
             throws ArtInjectException {
         ensureAndroidDebugBridge();
 
@@ -51,6 +51,23 @@ public class ArtInjector {
             throw new ArtInjectException("Can not find device, serial=" + serial);
         }
         System.out.println("[Success] found device, serial=" + device.getSerialNumber());
+
+        if (isLaunch) {
+            String[] launchAppCommand = new String[]{
+                    "am set-debug-app -w " + packageName
+            };
+            adbShell(device, launchAppCommand);
+            if (activityName != null) {
+                String activityPath = AndroidActivityLauncher.getLauncherActivityPath(packageName, activityName);
+                String[] startActivityCommand = AndroidActivityLauncher.getStartActivityCommand(activityPath);
+                adbShell(device, startActivityCommand);
+            }
+            String[] clearDebugAppCommand = new String[]{
+                    "am clear-debug-app"
+            };
+            adbShell(device, clearDebugAppCommand);
+        }
+
 
         Client client = findClient(device, packageName, timeout);
         if (client == null) {
@@ -167,8 +184,10 @@ public class ArtInjector {
     private void ensureAndroidDebugBridge() throws ArtInjectException {
         if (mAndroidDebugBridge == null) {
             try {
-                // DdmPreferences.setDebugPortBase(9600);
-                // DdmPreferences.setSelectedDebugPort(9700);
+
+                //TODO 暂时解决调试时 无法打开AS的问题
+                DdmPreferences.setDebugPortBase(9600);
+                DdmPreferences.setSelectedDebugPort(9700);
                 AndroidDebugBridge.disconnectBridge();
                 AndroidDebugBridge.terminate();
                 AndroidDebugBridge.init(true, false, ImmutableMap.of());
@@ -189,7 +208,7 @@ public class ArtInjector {
         }
     }
 
-    private IDevice findDevice(String serial, long timeout) throws ArtInjectException {
+    public IDevice findDevice(String serial, long timeout) throws ArtInjectException {
         ensureAndroidDebugBridge();
         IDevice targetDevice = null;
 
