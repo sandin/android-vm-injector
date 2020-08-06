@@ -4,13 +4,19 @@
 
 ### .so注入 
 ```
-$ artinjector -i <injecto_so> -p <package_name>
+$ artinjector -i <injecto_so> -p <package_name> --launch 
 ```
+可选参数 [ --launch -ac <activity_name>]
+* --launch: 将选择的应用置于等待调试器阶段
+* -ac <activity_name>: 可自动启动选中的应用
+
+现已支持root手机调试非debuggable的应用
 
 ### 检测app架构(32/64 bit)
 ```
 $ artinjector -p <package_name> -a
 ```
+
 
 ## ErrorCodes
 

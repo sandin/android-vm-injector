@@ -204,7 +204,7 @@ public class ArtInjector {
         if (mAndroidDebugBridge == null) {
             try {
 
-                //TODO 暂时解决调试时 无法打开AS的问题
+                //TODO
                 DdmPreferences.setDebugPortBase(9600);
                 DdmPreferences.setSelectedDebugPort(9700);
                 AndroidDebugBridge.disconnectBridge();
