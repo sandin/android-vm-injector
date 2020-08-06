@@ -70,6 +70,7 @@ public class ArtInjector {
         }
 
         try {
+            device.root();
             if (device.isRoot()) {
                 String[] openClientCommend = new String[]{
                         "setprop ro.debuggable 1"
