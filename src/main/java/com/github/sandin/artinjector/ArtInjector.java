@@ -6,6 +6,7 @@ import com.sun.jdi.ThreadReference;
 
 import javax.print.DocFlavor;
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -66,6 +67,23 @@ public class ArtInjector {
                     "am clear-debug-app"
             };
             adbShell(device, clearDebugAppCommand);
+        }
+
+        try {
+            if (device.isRoot()) {
+                String[] openClientCommend = new String[]{
+                        "setprop ro.debuggable 1"
+                };
+                adbShell(device, openClientCommend);
+            }
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        } catch (AdbCommandRejectedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ShellCommandUnresponsiveException e) {
+            e.printStackTrace();
         }
 
 
