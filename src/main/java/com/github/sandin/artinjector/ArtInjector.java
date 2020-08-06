@@ -295,13 +295,6 @@ public class ArtInjector {
         String remoteDir = "/data/data/" + packageName + "/";
         String remotePath = remoteDir + filename;
 
-        /*
-        boolean rooted = device.isRoot();
-        if (!rooted) {
-            rooted = device.root(); // try to get root permission
-        }
-         */
-
         device.pushFile(localFile.getAbsolutePath(), "/data/local/tmp/" + filename);
         System.out.println("[Success] isRoot: " + device.isRoot());
 
@@ -312,10 +305,25 @@ public class ArtInjector {
                 };
         String out = adbShell(device, cmd);
         if (out.trim().length() > 0) {
-            throw new Exception(out.trim()); // error
+            // try again as root
+            boolean rooted = device.isRoot();
+            if (!rooted) {
+                rooted = device.root(); // try to get root permission
+            }
+            if (rooted) {
+                adbShell(device, new String[]{"setenforce", "0"});
+                out = adbShell(device, new String[]{"cp", "/data/local/tmp/" + filename, remotePath});
+                if (out.trim().length() > 0) {
+                    throw new Exception(out.trim()); // error
+                }
+                adbShell(device, new String[]{"chmod", "777", remotePath});
+            } else {
+                throw new Exception(out.trim()); // error
+            }
         }
         return remotePath;
     }
+
 
     public void dispose() {
         AndroidDebugBridge.disconnectBridge();
