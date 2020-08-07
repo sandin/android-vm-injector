@@ -17,6 +17,7 @@ repositories {
 }
 
 dependencies {
+    compile files("${System.getProperty('java.home')}/../lib/tools.jar")
     compile fileTree(include: ['*.jar'], dir: 'libs')
 
     compile "com.android.tools.ddms:ddmlib:27.0.1"
@@ -36,3 +37,5 @@ jar {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
+
+
