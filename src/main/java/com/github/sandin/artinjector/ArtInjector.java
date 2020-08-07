@@ -4,7 +4,6 @@ import com.android.ddmlib.*;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jdi.ThreadReference;
 
-import javax.print.DocFlavor;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -61,6 +60,11 @@ public class ArtInjector {
             if (activityName != null) {
                 String activityPath = AndroidActivityLauncher.getLauncherActivityPath(packageName, activityName);
                 String[] startActivityCommand = AndroidActivityLauncher.getStartActivityCommand(activityPath);
+                adbShell(device, startActivityCommand);
+            } else {
+                String[] startActivityCommand = new String[] {
+                        "monkey", "-p", packageName, "-c android.intent.category.LAUNCHER --wait-dbg 1 2>&1 | sed \"s/^/\\[**\\] monkey says: /\""
+                };
                 adbShell(device, startActivityCommand);
             }
             String[] clearDebugAppCommand = new String[]{
