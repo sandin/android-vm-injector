@@ -7,8 +7,8 @@
 $ artinjector -i <injecto_so> -p <package_name> --launch 
 ```
 可选参数 [ --launch -ac <activity_name>]
-* --launch: 将选择的应用置于等待调试器阶段,然后根据package_name启动应用
-* -ac <activity_name>: 可自动启动选中的应用
+* --launch: 将选择的应用置于等待调试器阶段,如果未指定activity_name则根据package_name启动应用
+* -ac <activity_name>: 根据输入的activity_name启动应用
 
 现已支持root手机调试非debuggable的应用
 
