@@ -5,6 +5,9 @@ plugins {
 group 'com.github.sandin'
 version '1.0'
 
+sourceSets {
+    mainClassName = 'com.github.sandin.artinjector.App'
+}
 repositories {
     maven {
         url "https://maven.google.com/"

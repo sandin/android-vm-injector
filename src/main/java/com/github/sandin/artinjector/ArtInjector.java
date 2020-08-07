@@ -62,7 +62,7 @@ public class ArtInjector {
                 String[] startActivityCommand = AndroidActivityLauncher.getStartActivityCommand(activityPath);
                 adbShell(device, startActivityCommand);
             } else {
-                String[] startActivityCommand = new String[] {
+                String[] startActivityCommand = new String[]{
                         "monkey", "-p", packageName, "-c android.intent.category.LAUNCHER --wait-dbg 1 2>&1 | sed \"s/^/\\[**\\] monkey says: /\""
                 };
                 adbShell(device, startActivityCommand);
