@@ -9,12 +9,6 @@
 1. 检测Android应用的架构
 2. Android应用运行时注入.so文件并拉起
 
-## 要求 Requirements
-
-1、jdk ≥ 11
-
-2、Windows10
-
 ## 安装 Install
 
 ### with-jre
