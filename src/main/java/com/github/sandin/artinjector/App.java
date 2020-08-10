@@ -26,6 +26,7 @@ public class App {
                         .hasArg(true)
                         .required(true)
                         .build());
+
         options.addOption(
                 Option.builder("i")
                         .longOpt("injectso")
@@ -34,6 +35,7 @@ public class App {
                         .hasArg(true)
                         .required(false)
                         .build());
+
         options.addOption(
                 Option.builder("s")
                         .longOpt("serial")
@@ -42,6 +44,7 @@ public class App {
                         .hasArg(true)
                         .required(false)
                         .build());
+
         options.addOption(
                 Option.builder("a")
                         .longOpt("abi")
@@ -50,6 +53,7 @@ public class App {
                         .hasArg(false)
                         .required(false)
                         .build());
+
         options.addOption(
                 Option.builder("l")
                         .longOpt("launch")
@@ -58,11 +62,21 @@ public class App {
                         .hasArg(false)
                         .required(false)
                         .build());
+
         options.addOption(
                 Option.builder("ac")
                         .longOpt("activity")
                         .argName("activityName")
                         .desc("activity name")
+                        .hasArg(true)
+                        .required(false)
+                        .build());
+
+        options.addOption(
+                Option.builder("adb")
+                        .longOpt("adbPath")
+                        .argName("adbPath")
+                        .desc("inject so")
                         .hasArg(true)
                         .required(false)
                         .build());
@@ -78,9 +92,12 @@ public class App {
         }
 
 
-        String adbPath = "adb"; //TODO
-        //String adbPath = "d:\\adb\\adb.exe"; // TODO: adb path
+        String adbPath = "adb";
+        if (cl.hasOption("adb")) {
+            adbPath = cl.getOptionValue("adbPath");
+            System.out.println("[Success] Adb Path is : " + adbPath);
 
+        }
 
         String packageName = cl.getOptionValue("package");
         String injectSo = cl.getOptionValue("injectso");
@@ -90,7 +107,7 @@ public class App {
         ArtInjector artInjector = new ArtInjector(adbPath);
         if (cl.hasOption("a")) {
             try {
-                String appAbi = artInjector.getAppAbi(serial, packageName, 60 * 1000);
+                String appAbi = artInjector.getAppAbi(serial, packageName, 30 * 1000);
                 System.out.println("[Success] Application abi is : " + appAbi);
             } catch (ArtInjectException e) {
                 System.err.println("[Error] ErrorInfo: " + e.getMessage());
@@ -113,7 +130,7 @@ public class App {
                 needLaunch = true;
             }
             try {
-                artInjector.inject(serial, packageName, soFile, 60 * 1000, needLaunch, activityName);
+                artInjector.inject(serial, packageName, soFile, 30 * 1000, needLaunch, activityName);
             } catch (
                     ArtInjectException e) {
                 System.err.println("[Error] ErrorInfo: " + e.getMessage());

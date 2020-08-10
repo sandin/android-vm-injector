@@ -10,4 +10,5 @@ public class ErrorCodes {
     public final static Integer SOFILE_SHOULD_USE_32BIT = 7;
     public final static Integer SOFILE_SHOULD_USE_64BIT = 8;
     public final static Integer LOAD_SO_FAIL = 9;
+    public final static Integer CANT_GET_ADB = 10;
 }

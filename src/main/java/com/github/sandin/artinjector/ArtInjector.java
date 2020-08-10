@@ -225,6 +225,7 @@ public class ArtInjector {
                     }
                 }
             } catch (Throwable e) {
+                System.out.println("[ErrorCode]: " + ErrorCodes.CANT_GET_ADB);
                 System.out.println(mAdbPath);
                 throw new ArtInjectException("Can not create AndroidDebugBridget", e);
             }

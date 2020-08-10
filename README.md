@@ -32,6 +32,10 @@ $ artinjector -i <injecto_so> -p <package_name> --launch
 * --launch: 将选择的应用置于等待调试器阶段,如果未指定activity_name则根据package_name启动应用
 * -ac <activity_name>: 根据输入的activity_name启动应用
 
+可选参数 [ --adbPath <adb_path>]
+
+- 指定adb路径,不传则使用环境变量中配置的adb路径
+
 非root手机仅支持注入debuggable的Android应用
 
 ### 检测app架构(32/64 bit)
@@ -51,7 +55,11 @@ BREAKPOINT_TIMEOUT = 6; 	  		//断点超时
 SOFILE_SHOULD_USE_32BIT = 7; 		//应用为32位，使用了64位的.so
 SOFILE_SHOULD_USE_64BIT = 8;    //应用为64位，使用了32位的.so
 LOAD_SO_FAIL = 9;               //拉起so失败
+CANT_GET_ADB = 10;               //无法创建调试桥
 ```
 
 ## 常见问题 Tips
 * 如果一直在等待断点阶段(wait breakpoints)，尝试切出应用再切回应用
+* 无法创建调试桥的可能原因：没有将本地的adb配置到环境变量且未手动指定本地的adb路径，解决方案：
+  1. 将本地的adb添加到环境变量
+  2. 使用--adbPath <adb_path>来指定adb路径
