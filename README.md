@@ -28,13 +28,18 @@
 ```
 $ artinjector -i <injecto_so> -p <package_name> --launch 
 ```
-可选参数 [ --launch -ac <activity_name>]
-* --launch: 将选择的应用置于等待调试器阶段,如果未指定activity_name则根据package_name启动应用
-* -ac <activity_name>: 根据输入的activity_name启动应用
+可选参数:
 
-可选参数 [ --adbPath <adb_path>]
+- [ --launch -ac <activity_name>]
+  --launch: 将选择的应用置于等待调试器阶段,如果未指定activity_name则根据package_name启动应用
 
-- 指定adb路径,不传则使用环境变量中配置的adb路径
+  -ac <activity_name>: 根据输入的activity_name启动应用
+
+- [ --adbPath <adb_path>]
+
+  - 指定adb路径
+  
+  
 
 非root手机仅支持注入debuggable的Android应用
 
