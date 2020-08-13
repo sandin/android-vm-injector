@@ -30,6 +30,44 @@ public class ArtInjector {
         mAdbPath = adbPath;
     }
 
+    //Launch Application
+    public void launchApplication(String serial, String packageName, String activityName, long timeout) throws ArtInjectException {
+
+        IDevice device = getDevice(serial, timeout);
+
+        String[] launchAppCommand = new String[]{
+                "am set-debug-app -w " + packageName
+        };
+        adbShell(device, launchAppCommand);
+        if (activityName != null) {
+            String activityPath = AndroidActivityLauncher.getLauncherActivityPath(packageName, activityName);
+            String[] startActivityCommand = AndroidActivityLauncher.getStartActivityCommand(activityPath);
+            adbShell(device, startActivityCommand);
+        } else {
+            String[] startActivityCommand = new String[]{
+                    "monkey", "-p", packageName, "-c android.intent.category.LAUNCHER --wait-dbg 1 2>&1 | sed \"s/^/\\[**\\] monkey says: /\""
+            };
+            adbShell(device, startActivityCommand);
+        }
+        String[] clearDebugAppCommand = new String[]{
+                "am clear-debug-app"
+        };
+        adbShell(device, clearDebugAppCommand);
+    }
+
+    public IDevice getDevice(String serial, Long timeout) throws ArtInjectException {
+        ensureAndroidDebugBridge();
+
+        // Find device and client
+        IDevice device = findDevice(serial, timeout);
+        if (device == null) {
+            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_FIND_DEVICE);
+            throw new ArtInjectException("Can not find device, serial=" + serial);
+        }
+        System.out.println("[Success] found device, serial=" + device.getSerialNumber());
+        return device;
+    }
+
     /**
      * Inject a so file into target application
      *
@@ -42,37 +80,10 @@ public class ArtInjector {
      */
     public boolean inject(String serial, String packageName, File soFile, long timeout, Boolean isLaunch, String activityName)
             throws ArtInjectException {
-        ensureAndroidDebugBridge();
 
-        // Find device and client
-        IDevice device = findDevice(serial, timeout);
-        if (device == null) {
-            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_FIND_DEVICE);
-            throw new ArtInjectException("Can not find device, serial=" + serial);
-        }
-        System.out.println("[Success] found device, serial=" + device.getSerialNumber());
+        IDevice device = getDevice(serial, timeout);
 
-        if (isLaunch) {
-            String[] launchAppCommand = new String[]{
-                    "am set-debug-app -w " + packageName
-            };
-            adbShell(device, launchAppCommand);
-            if (activityName != null) {
-                String activityPath = AndroidActivityLauncher.getLauncherActivityPath(packageName, activityName);
-                String[] startActivityCommand = AndroidActivityLauncher.getStartActivityCommand(activityPath);
-                adbShell(device, startActivityCommand);
-            } else {
-                String[] startActivityCommand = new String[]{
-                        "monkey", "-p", packageName, "-c android.intent.category.LAUNCHER --wait-dbg 1 2>&1 | sed \"s/^/\\[**\\] monkey says: /\""
-                };
-                adbShell(device, startActivityCommand);
-            }
-            String[] clearDebugAppCommand = new String[]{
-                    "am clear-debug-app"
-            };
-            adbShell(device, clearDebugAppCommand);
-        }
-
+        //TODO root devices
         try {
             device.root();
             if (device.isRoot()) {
@@ -355,17 +366,7 @@ public class ArtInjector {
     }
 
     public String getAppAbi(String serial, String packageName, long timeout) throws ArtInjectException {
-        ensureAndroidDebugBridge();
-
-
-        // Find device and client
-        IDevice device = findDevice(serial, timeout);
-        if (device == null) {
-            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_FIND_DEVICE);
-            throw new ArtInjectException("Can not find device, serial=" + serial);
-        }
-        System.out.println("[Success] found device, serial=" + device.getSerialNumber());
-
+        IDevice device = getDevice(serial, timeout);
         Client client = findClient(device, packageName, timeout);
         if (client == null) {
             System.out.println("[ErrorCode]: " + ErrorCodes.CANT_GET_CLIENT);

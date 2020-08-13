@@ -3,10 +3,10 @@ package com.github.sandin.artinjector;
 public class AndroidActivityLauncher {
     public static String[] getStartActivityCommand(String activityPath) {
         return new String[]{
-                "am start" +
-                " -n \"" + activityPath + "\"" +
-                " -a android.intent.action.MAIN" +
-                " -c android.intent.category.LAUNCHER"
+                "am start " +
+                        " -n \"" + activityPath + "\"" +
+                        " -a android.intent.action.MAIN" +
+                        " -c android.intent.category.LAUNCHER"
         };
     }
 

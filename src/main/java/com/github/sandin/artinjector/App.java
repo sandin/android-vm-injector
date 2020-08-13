@@ -14,7 +14,7 @@ public class App {
     private static final String USAGE_INJECT = "artinjector -i <injecto_so> -p <package_name>";
     private static final String USAGE_GETABI = "artinjector -p <package_name> -a";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ArtInjectException {
         System.out.println("[Success] Android VM Injector v1.0");
         DefaultParser parser = new DefaultParser();
         Options options = new Options();
@@ -114,30 +114,30 @@ public class App {
                 System.exit(-1);
             }
         } else {
-            if (!cl.hasOption("i")) {
-                HelpFormatter hf = new HelpFormatter();
-                hf.printHelp(USAGE_INJECT, options);
-                System.exit(-1);
-            }
-            File soFile = new File(injectSo);
-            if (!soFile.exists()) {
-                System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
-                System.err.println(
-                        "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
-                return;
-            }
             if (cl.hasOption("l")) {
-                needLaunch = true;
+                artInjector.launchApplication(serial, packageName, activityName, 10 * 1000);
             }
-            try {
-                artInjector.inject(serial, packageName, soFile, 30 * 1000, needLaunch, activityName);
-            } catch (
-                    ArtInjectException e) {
-                System.err.println("[Error] ErrorInfo: " + e.getMessage());
-                System.exit(-1);
+            if (!cl.hasOption("i")) {
+                System.exit(0);
+            } else {
+                File soFile = new File(injectSo);
+                if (!soFile.exists()) {
+                    System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
+                    System.err.println(
+                            "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
+                    return;
+                }
+
+                try {
+                    artInjector.inject(serial, packageName, soFile, 30 * 1000, needLaunch, activityName);
+                } catch (ArtInjectException e) {
+                    System.err.println("[Error] ErrorInfo: " + e.getMessage());
+                    System.exit(-1);
+                }
+                //artInjector.dispose();
+                System.out.println("[Success] Inject: OK");
             }
-            //artInjector.dispose();
-            System.out.println("[Success] Inject: OK");
+
         }
         System.exit(0);
     }

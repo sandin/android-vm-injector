@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'com.github.sandin'
-version '0.0.1'
+version '0.0.3'
 
 sourceSets {
     mainClassName = 'com.github.sandin.artinjector.App'

@@ -1,4 +1,4 @@
-# Android Injector v0.0.1
+# Android Injector v0.0.3
 
 ## 简介
 
@@ -26,14 +26,9 @@
 
 ### .so注入 
 ```
-$ artinjector -i <injecto_so> -p <package_name> --launch 
+$ artinjector -i <injecto_so> -p <package_name>
 ```
 可选参数:
-
-- [ --launch -ac <activity_name>]
-  --launch: 将选择的应用置于等待调试器阶段,如果未指定activity_name则根据package_name启动应用
-
-  -ac <activity_name>: 根据输入的activity_name启动应用
 
 - [ --adbPath <adb_path>]
 
@@ -47,6 +42,18 @@ $ artinjector -i <injecto_so> -p <package_name> --launch
 ```
 $ artinjector -p <package_name> -a
 ```
+
+
+
+### 启动应用并置于等待调试器阶段
+
+```
+$ artinjector -p <package_name> --launch
+```
+
+可选参数:
+
+- [-ac  <activity_name>] 根据输入的activity_name来启动应用，如果未指定activity_name则根据package_name启动应用
 
 ### 错误码 ErrorCodes
 
