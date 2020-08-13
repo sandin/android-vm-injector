@@ -49,10 +49,10 @@ public class ArtInjector {
             };
             adbShell(device, startActivityCommand);
         }
-        String[] clearDebugAppCommand = new String[]{
-                "am clear-debug-app"
-        };
-        adbShell(device, clearDebugAppCommand);
+        //String[] clearDebugAppCommand = new String[]{
+        //        "am clear-debug-app"
+        //};
+        //adbShell(device, clearDebugAppCommand);
     }
 
     public IDevice getDevice(String serial, Long timeout) throws ArtInjectException {
