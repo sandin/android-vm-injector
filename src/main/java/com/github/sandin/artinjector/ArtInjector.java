@@ -21,6 +21,7 @@ public class ArtInjector {
                     }, // for android.app.Application.attachBaseContext()
                     {"android.app.Activity", "onCreate"},
                     {"android.os.Looper", "myLooper"},
+                    {"com.unity3d.player.UnityPlayer","executeGLThreadJobs"}
             };
 
     private final String mAdbPath;
