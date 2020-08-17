@@ -1,4 +1,4 @@
-# Android Injector v0.0.3
+# Android Injector v0.0.4
 
 ## 简介
 
@@ -34,8 +34,7 @@ $ artinjector -i <injecto_so> -p <package_name>
 
   - 指定adb路径
   
-  
-
+如果未指定adb路径则优先寻找系统中已存在的adb进程和环境变量中的adb路径
 非root手机仅支持注入debuggable的Android应用
 
 ### 检测app架构(32/64 bit)
@@ -72,6 +71,8 @@ CANT_GET_ADB = 10;               //无法创建调试桥
 
 ## 常见问题 Tips
 * 如果一直在等待断点阶段(wait breakpoints)，尝试切出应用再切回应用
-* 无法创建调试桥的可能原因：没有将本地的adb配置到环境变量且未手动指定本地的adb路径，解决方案：
+* 无法创建调试桥的可能原因：没有将本地的adb配置到环境变量,未手动指定本地的adb路径及未启动adb服务，解决方案：
   1. 将本地的adb添加到环境变量
   2. 使用--adbPath <adb_path>来指定adb路径
+  3. 启动adb服务
+  
