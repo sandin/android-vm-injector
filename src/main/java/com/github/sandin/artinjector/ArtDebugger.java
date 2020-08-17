@@ -285,12 +285,14 @@ public class ArtDebugger {
      *
      * @param breakpoint breakpoint to add
      */
-    public void addBreakpoint(Breakpoint breakpoint) {
+    public boolean addBreakpoint(Breakpoint breakpoint) {
         assertVirtualMachine();
         if (breakpoint.enable(mVirtualMachine)) {
             mEventRequestMap.put(breakpoint.getEventRequest(), breakpoint);
             mBreakpoints.add(breakpoint);
+            return true;
         }
+        return false;
     }
 
     /**

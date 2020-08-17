@@ -21,7 +21,7 @@ public class ArtInjector {
                     }, // for android.app.Application.attachBaseContext()
                     {"android.app.Activity", "onCreate"},
                     {"android.os.Looper", "myLooper"},
-                    {"com.unity3d.player.UnityPlayer","executeGLThreadJobs"}
+                    {"com.unity3d.player.UnityPlayer", "executeGLThreadJobs"},
             };
 
     private final String mAdbPath;
@@ -184,12 +184,14 @@ public class ArtInjector {
 
         // Create breakpoints
         for (String[] breakpoint : BREAKPOINTS) {
-            artDebugger.addBreakpoint(
+            if (artDebugger.addBreakpoint(
                     new ArtDebugger.Breakpoint.Builder()
                             .className(breakpoint[0])
                             .methodName(breakpoint[1])
-                            .build());
-            System.out.println("[Success] added breakpoint: " + breakpoint[0] + "." + breakpoint[1]);
+                            .build())) {
+                System.out.println("[Success] added breakpoint: " + breakpoint[0] + "." + breakpoint[1]);
+            }
+
         }
 
         // Inject java code to load so
@@ -401,6 +403,5 @@ public class ArtInjector {
         }
         return client.getClientData().getAbi();
     }
-
 
 }

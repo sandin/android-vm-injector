@@ -103,10 +103,10 @@ public class App {
         String activityName = cl.getOptionValue("ac");
         ArtInjector artInjector;
 
-        if (!AdbUtils.checkAdbProcess()) {
+        if (!AdbUtils.checkAdbProcess() && !cl.hasOption("adb")) {
             System.out.println("[Success] Adb Path is : " + adbPath);
             artInjector = new ArtInjector(adbPath);
-        }else {
+        } else {
             artInjector = new ArtInjector();
         }
 
