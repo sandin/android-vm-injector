@@ -30,6 +30,31 @@ public class ArtInjector {
         mAdbPath = adbPath;
     }
 
+    public ArtInjector() {
+        mAdbPath = null;
+    }
+
+    private static String adbShell(IDevice device, String[] command) {
+        CountDownLatch latch = new CountDownLatch(1);
+        CollectingOutputReceiver receiver = new CollectingOutputReceiver(latch);
+
+        try {
+            String cmd = String.join(" ", command);
+            System.out.println("[Success] adb shell " + cmd);
+            device.executeShellCommand(cmd, receiver, 2L, TimeUnit.SECONDS);
+        } catch (Exception var6) {
+            return null;
+        }
+
+        try {
+            latch.await(2L, TimeUnit.SECONDS);
+        } catch (InterruptedException var5) {
+            return null;
+        }
+
+        return receiver.getOutput().trim();
+    }
+
     //Launch Application
     public void launchApplication(String serial, String packageName, String activityName, long timeout) throws ArtInjectException {
 
@@ -78,7 +103,7 @@ public class ArtInjector {
      * @return success/fail
      * @throws ArtInjectException
      */
-    public boolean inject(String serial, String packageName, File soFile, long timeout, Boolean isLaunch, String activityName)
+    public boolean inject(String serial, String packageName, File soFile, long timeout)
             throws ArtInjectException {
 
         IDevice device = getDevice(serial, timeout);
@@ -225,8 +250,28 @@ public class ArtInjector {
                 AndroidDebugBridge.disconnectBridge();
                 AndroidDebugBridge.terminate();
                 AndroidDebugBridge.init(true, false, ImmutableMap.of());
+                if (mAdbPath != null) {
+                    mAndroidDebugBridge = AndroidDebugBridge.createBridge(mAdbPath, false);
+                } else {
+                    AndroidDebugBridge.addDeviceChangeListener(new AndroidDebugBridge.IDeviceChangeListener() {
+                        @Override
+                        public void deviceConnected(IDevice device) {
+                            System.out.println("[Success] Device Connected , Serial is : " + device.getSerialNumber());
+                        }
 
-                mAndroidDebugBridge = AndroidDebugBridge.createBridge(mAdbPath, false);
+                        @Override
+                        public void deviceDisconnected(IDevice device) {
+                            System.out.println("[Success] Device Disconnected , Serial is : " + device.getSerialNumber());
+                        }
+
+                        @Override
+                        public void deviceChanged(IDevice device, int changeMask) {
+                            System.out.println("[Success] Device Changed , Serial is : " + device.getSerialNumber());
+                        }
+                    });
+                    mAndroidDebugBridge = AndroidDebugBridge.createBridge();
+                    Thread.sleep(1000);
+                }
                 while (!mAndroidDebugBridge.isConnected()) {
                     try {
                         TimeUnit.MILLISECONDS.sleep(200);
@@ -301,27 +346,6 @@ public class ArtInjector {
             }
         }
         return client;
-    }
-
-    private static String adbShell(IDevice device, String[] command) {
-        CountDownLatch latch = new CountDownLatch(1);
-        CollectingOutputReceiver receiver = new CollectingOutputReceiver(latch);
-
-        try {
-            String cmd = String.join(" ", command);
-            System.out.println("[Success] adb shell " + cmd);
-            device.executeShellCommand(cmd, receiver, 2L, TimeUnit.SECONDS);
-        } catch (Exception var6) {
-            return null;
-        }
-
-        try {
-            latch.await(2L, TimeUnit.SECONDS);
-        } catch (InterruptedException var5) {
-            return null;
-        }
-
-        return receiver.getOutput().trim();
     }
 
     private String pushFileIntoDevice(IDevice device, String packageName, File localFile)

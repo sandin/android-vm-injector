@@ -95,16 +95,21 @@ public class App {
         String adbPath = "adb";
         if (cl.hasOption("adb")) {
             adbPath = cl.getOptionValue("adbPath");
-            System.out.println("[Success] Adb Path is : " + adbPath);
-
         }
 
         String packageName = cl.getOptionValue("package");
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
         String activityName = cl.getOptionValue("ac");
-        Boolean needLaunch = false;
-        ArtInjector artInjector = new ArtInjector(adbPath);
+        ArtInjector artInjector;
+
+        if (!AdbUtils.checkAdbProcess()) {
+            System.out.println("[Success] Adb Path is : " + adbPath);
+            artInjector = new ArtInjector(adbPath);
+        }else {
+            artInjector = new ArtInjector();
+        }
+
         if (cl.hasOption("a")) {
             try {
                 String appAbi = artInjector.getAppAbi(serial, packageName, 30 * 1000);
@@ -129,7 +134,7 @@ public class App {
                 }
 
                 try {
-                    artInjector.inject(serial, packageName, soFile, 30 * 1000, needLaunch, activityName);
+                    artInjector.inject(serial, packageName, soFile, 30 * 1000);
                 } catch (ArtInjectException e) {
                     System.err.println("[Error] ErrorInfo: " + e.getMessage());
                     System.exit(-1);
