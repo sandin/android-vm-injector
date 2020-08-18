@@ -1,10 +1,11 @@
 package com.github.sandin.artinjector;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-public class AdbUtils {
+public class Utils {
 
     public static boolean checkAdbProcess() {
         boolean flag = false;
@@ -31,5 +32,19 @@ public class AdbUtils {
         }
         return flag;
     }
+
+    public static Boolean checkSoPaths(String[] soPaths) {
+        for (String soPath : soPaths) {
+            File soFile = new File(soPath);
+            if (!soFile.exists()) {
+                System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
+                System.err.println(
+                        "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
+                return false;
+            }
+        }
+        return true;
+    }
+
 
 }

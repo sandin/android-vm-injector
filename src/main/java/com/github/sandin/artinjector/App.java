@@ -3,6 +3,7 @@ package com.github.sandin.artinjector;
 import org.apache.commons.cli.*;
 
 import java.io.File;
+import java.util.Arrays;
 
 /**
  * Application
@@ -103,7 +104,7 @@ public class App {
         String activityName = cl.getOptionValue("ac");
         ArtInjector artInjector;
 
-        if (!AdbUtils.checkAdbProcess() && !cl.hasOption("adb")) {
+        if (!Utils.checkAdbProcess() && !cl.hasOption("adb")) {
             System.out.println("[Success] Adb Path is : " + adbPath);
             artInjector = new ArtInjector(adbPath);
         } else {
@@ -125,16 +126,17 @@ public class App {
             if (!cl.hasOption("i")) {
                 System.exit(0);
             } else {
-                File soFile = new File(injectSo);
-                if (!soFile.exists()) {
-                    System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
-                    System.err.println(
-                            "[Error] ErrorInfo: inject so file is not exists, " + soFile.getAbsolutePath());
+                String[] soPaths = injectSo.split(",");
+                System.out.println(Arrays.toString(soPaths));
+                if (!Utils.checkSoPaths(soPaths)) {
                     return;
                 }
-
+                File[] soFiles = new File[soPaths.length];
+                for (int i = 0; i < soFiles.length; i++) {
+                    soFiles[i] = new File(soPaths[i]);
+                }
                 try {
-                    artInjector.inject(serial, packageName, soFile, 30 * 1000);
+                    artInjector.inject(serial, packageName, soFiles, 30 * 1000);
                 } catch (ArtInjectException e) {
                     System.err.println("[Error] ErrorInfo: " + e.getMessage());
                     System.exit(-1);

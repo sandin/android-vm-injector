@@ -15,17 +15,23 @@ import java.util.*;
  */
 public class ArtDebugger {
 
+    private final List<Breakpoint> mBreakpoints = new ArrayList<>();
+    private final Map<EventRequest, Breakpoint> mEventRequestMap = new HashMap<>();
+    private final List<EventListener> mEventListeners = new ArrayList<>();
     private VirtualMachine mVirtualMachine;
     private boolean mAttached = false;
-
-    private List<Breakpoint> mBreakpoints = new ArrayList<>();
-    private Map<EventRequest, Breakpoint> mEventRequestMap = new HashMap<>();
-    private List<EventListener> mEventListeners = new ArrayList<>();
-
     private Thread mEventMonitorThread = null;
     private volatile boolean mEventMonitorThreadRunning = false;
 
     public ArtDebugger() {
+    }
+
+    private static ClassType findClass(VirtualMachine vm, String className) {
+        List<ReferenceType> classes = vm.classesByName(className);
+        if (classes != null && classes.size() > 0) {
+            return (ClassType) classes.get(0);
+        }
+        return null;
     }
 
     /**
@@ -146,11 +152,15 @@ public class ArtDebugger {
 
         Value invokeResult = null;
         try {
-            invokeResult =
-                    cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
-            result.setResult(invokeResult);
-            System.out.println(
-                    "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
+            for (Value value : methodArgs) {
+                List<Value> methodArg = new ArrayList<>();
+                methodArg.add(value);
+                invokeResult =
+                        cls.invokeMethod(thread, method, methodArg, options); // System.load(libpath);
+                result.setResult(invokeResult);
+                System.out.println(
+                        "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
+            }
         } catch (InvocationException e) {
             System.out.println("[ErrorCode]: " + ErrorCodes.LOAD_SO_FAIL);
             System.err.println("[Error] invoke method fail, exception: " + e);
@@ -358,12 +368,18 @@ public class ArtDebugger {
         }
     }
 
-    private static ClassType findClass(VirtualMachine vm, String className) {
-        List<ReferenceType> classes = vm.classesByName(className);
-        if (classes != null && classes.size() > 0) {
-            return (ClassType) classes.get(0);
-        }
-        return null;
+    /**
+     * Listener for Debugger Event
+     */
+    public interface EventListener {
+
+        /**
+         * Event callback method
+         *
+         * @param event which event
+         * @return consumed or not
+         */
+        boolean onEvent(Event event);
     }
 
     /**
@@ -374,20 +390,20 @@ public class ArtDebugger {
         protected boolean mEnabled;
         protected int mSuspendPolicy;
 
-        public void setEnabled(boolean enabled) {
-            mEnabled = enabled;
-        }
-
         public boolean isEnabled() {
             return mEnabled;
         }
 
-        public void setSuspendPolicy(int suspendPolicy) {
-            mSuspendPolicy = suspendPolicy;
+        public void setEnabled(boolean enabled) {
+            mEnabled = enabled;
         }
 
         public int getSuspendPolicy() {
             return mSuspendPolicy;
+        }
+
+        public void setSuspendPolicy(int suspendPolicy) {
+            mSuspendPolicy = suspendPolicy;
         }
 
         public abstract boolean enable(VirtualMachine vm);
@@ -501,8 +517,8 @@ public class ArtDebugger {
      */
     public static class EvaluateContext {
 
-        private ThreadReference mThread;
-        private Method mMethod;
+        private final ThreadReference mThread;
+        private final Method mMethod;
 
         public EvaluateContext(ThreadReference thread, Method method) {
             mThread = thread;
@@ -525,12 +541,12 @@ public class ArtDebugger {
         private Object mObject = null;
         private String mError = null;
 
-        public void setResult(Object result) {
-            mObject = result;
-        }
-
         public Object getResult() {
             return mObject;
+        }
+
+        public void setResult(Object result) {
+            mObject = result;
         }
 
         public String getError() {
@@ -547,7 +563,7 @@ public class ArtDebugger {
      */
     public abstract static class Event {
 
-        private EvaluateContext mEvaluateContext;
+        private final EvaluateContext mEvaluateContext;
 
         public Event(EvaluateContext evaluateContext) {
             mEvaluateContext = evaluateContext;
@@ -563,7 +579,7 @@ public class ArtDebugger {
      */
     public static class BreakpointEvent extends Event {
 
-        private MethodBreakpoint mBreakpoint;
+        private final MethodBreakpoint mBreakpoint;
 
         public BreakpointEvent(EvaluateContext evaluateContext, MethodBreakpoint breakpoint) {
             super(evaluateContext);
@@ -573,19 +589,5 @@ public class ArtDebugger {
         public MethodBreakpoint getBreakpoint() {
             return mBreakpoint;
         }
-    }
-
-    /**
-     * Listener for Debugger Event
-     */
-    public interface EventListener {
-
-        /**
-         * Event callback method
-         *
-         * @param event which event
-         * @return consumed or not
-         */
-        boolean onEvent(Event event);
     }
 }

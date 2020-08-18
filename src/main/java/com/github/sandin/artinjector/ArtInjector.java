@@ -6,6 +6,7 @@ import com.sun.jdi.ThreadReference;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -99,12 +100,12 @@ public class ArtInjector {
      *
      * @param serial      device's serial, null for first device
      * @param packageName package name of application
-     * @param soFile      so file
+     * @param soFiles     so files
      * @param timeout     wait timeout
      * @return success/fail
      * @throws ArtInjectException
      */
-    public boolean inject(String serial, String packageName, File soFile, long timeout)
+    public boolean inject(String serial, String packageName, File[] soFiles, long timeout)
             throws ArtInjectException {
 
         IDevice device = getDevice(serial, timeout);
@@ -145,22 +146,27 @@ public class ArtInjector {
                         + client.getClientData().getAbi());
 
         // Push so file into device
-        final String soRemotePath;
-        try {
-            soRemotePath = pushFileIntoDevice(device, packageName, soFile);
-        } catch (Throwable e) {
-            System.out.println("[ErrorCode]: " + ErrorCodes.CANT_PUSH_FILE);
-            throw new ArtInjectException(
-                    "Can not push so file into device, packageName="
-                            + packageName
-                            + ", soFile="
-                            + soFile);
+        String[] soRemotePaths = new String[soFiles.length];
+        for (int i = 0; i < soFiles.length; i++) {
+            File soFile = soFiles[i];
+            String soRemotePath;
+            try {
+                soRemotePath = pushFileIntoDevice(device, packageName, soFile);
+                soRemotePaths[i] = soRemotePath;
+            } catch (Throwable e) {
+                System.out.println("[ErrorCode]: " + ErrorCodes.CANT_PUSH_FILE);
+                throw new ArtInjectException(
+                        "Can not push so file into device, packageName="
+                                + packageName
+                                + ", soFile="
+                                + soFile);
+            }
+            System.out.println(
+                    "[Success] pushed so file into device, local file: "
+                            + soFile.getAbsolutePath()
+                            + ", remote file: "
+                            + soRemotePath);
         }
-        System.out.println(
-                "[Success] pushed so file into device, local file: "
-                        + soFile.getAbsolutePath()
-                        + ", remote file: "
-                        + soRemotePath);
 
         // Attach app as JDWP Debugger
         int port = client.getDebuggerListenPort();
@@ -198,23 +204,22 @@ public class ArtInjector {
         CountDownLatch latch = new CountDownLatch(1); // wait for breakpoint hint
         final ArtDebugger.EvaluateResult[] future = {null};
         artDebugger.registerEventListener(
-                new ArtDebugger.EventListener() {
-                    public boolean onEvent(ArtDebugger.Event event) {
-                        ThreadReference thread = event.getEvaluateContext().getThread();
-                        if (event instanceof ArtDebugger.BreakpointEvent
-                                && future[0] == null
-                                && "main".equals(thread.name())) {
-                            future[0] =
-                                    artDebugger.evaluateMethod(
-                                            event.getEvaluateContext(),
-                                            INVOKE_LOAD_METHOD[0],
-                                            INVOKE_LOAD_METHOD[1],
-                                            new Object[]{soRemotePath});
-                            latch.countDown();
-                            return true;
-                        }
-                        return false;
+                event -> {
+                    ThreadReference thread = event.getEvaluateContext().getThread();
+                    if (event instanceof ArtDebugger.BreakpointEvent
+                            && future[0] == null
+                            && "main".equals(thread.name())) {
+                        future[0] =
+                                artDebugger.evaluateMethod(
+                                        event.getEvaluateContext(),
+                                        INVOKE_LOAD_METHOD[0],
+                                        INVOKE_LOAD_METHOD[1],
+                                        soRemotePaths);
+
+                        latch.countDown();
+                        return true;
                     }
+                    return false;
                 });
         try {
             System.out.println("[Success] waiting for breakpoints");
@@ -358,7 +363,6 @@ public class ArtInjector {
         String remotePath = remoteDir + filename;
 
         device.pushFile(localFile.getAbsolutePath(), "/data/local/tmp/" + filename);
-        System.out.println("[Success] isRoot: " + device.isRoot());
 
         //adbShell(device, new String[]{"run-as", packageName, "mkdir", remoteDir});
         String[] cmd =
