@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class ArtInjector {
     private static final String[] INVOKE_LOAD_METHOD = new String[]{"java.lang.System", "load"};
-    private static String[][] BREAKPOINTS = null;
     private final String mAdbPath;
     private AndroidDebugBridge mAndroidDebugBridge = null;
 
@@ -178,6 +177,7 @@ public class ArtInjector {
                         + ", jdwp version="
                         + artDebugger.getVirtualMachine().version());
 
+        String[][] BREAKPOINTS;
         if (breakPoints == null) {
             BREAKPOINTS = new String[][]{
                     {
