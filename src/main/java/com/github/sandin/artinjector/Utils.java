@@ -4,8 +4,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Properties;
 
 public class Utils {
+
+    public static String getOsName() {
+        Properties prop = System.getProperties();
+        return prop.getProperty("os.name");
+    }
 
     public static boolean checkAdbProcess() {
         boolean flag = false;

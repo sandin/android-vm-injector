@@ -6,7 +6,6 @@ import com.sun.jdi.ThreadReference;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -15,16 +14,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ArtInjector {
     private static final String[] INVOKE_LOAD_METHOD = new String[]{"java.lang.System", "load"};
-    private static final String[][] BREAKPOINTS =
-            new String[][]{
-                    {
-                            "android.content.ContextWrapper", "attachBaseContext"
-                    }, // for android.app.Application.attachBaseContext()
-                    {"android.app.Activity", "onCreate"},
-                    {"android.os.Looper", "myLooper"},
-                    {"com.unity3d.player.UnityPlayer", "executeGLThreadJobs"},
-            };
-
+    private static String[][] BREAKPOINTS = null;
     private final String mAdbPath;
     private AndroidDebugBridge mAndroidDebugBridge = null;
 
@@ -105,7 +95,7 @@ public class ArtInjector {
      * @return success/fail
      * @throws ArtInjectException
      */
-    public boolean inject(String serial, String packageName, File[] soFiles, long timeout)
+    public boolean inject(String serial, String packageName, File[] soFiles, String breakPoints, long timeout)
             throws ArtInjectException {
 
         IDevice device = getDevice(serial, timeout);
@@ -188,6 +178,31 @@ public class ArtInjector {
                         + ", jdwp version="
                         + artDebugger.getVirtualMachine().version());
 
+        if (breakPoints == null) {
+            BREAKPOINTS = new String[][]{
+                    {
+                            "android.content.ContextWrapper", "attachBaseContext"
+                    }, // for android.app.Application.attachBaseContext()
+                    {"android.app.Activity", "onCreate"},
+                    {"android.os.Looper", "myLooper"},
+                    {"com.unity3d.player.UnityPlayer", "executeGLThreadJobs"},
+            };
+        } else {
+            String[] breakPoint = breakPoints.split(",");
+            BREAKPOINTS = new String[breakPoint.length][2];
+            for (int i = 0; i < breakPoint.length; i++) {
+                String point = breakPoint[i];
+                int index = point.lastIndexOf(".");
+                if (index == -1) {
+                    System.out.println("[ErrorCode]: " + ErrorCodes.BREAKPOINTS_HAVE_ERROR);
+                    throw new ArtInjectException("Breakpoint format error");
+                }
+                String className = point.substring(0, index);
+                String methodName = point.substring(index + 1);
+                BREAKPOINTS[i][0] = className;
+                BREAKPOINTS[i][1] = methodName;
+            }
+        }
         // Create breakpoints
         for (String[] breakpoint : BREAKPOINTS) {
             if (artDebugger.addBreakpoint(

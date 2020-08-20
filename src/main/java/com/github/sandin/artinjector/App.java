@@ -17,6 +17,7 @@ public class App {
 
     public static void main(String[] args) throws ArtInjectException {
         System.out.println("[Success] Android VM Injector v1.0");
+        System.out.println("[Success] OS is :" + Utils.getOsName());
         DefaultParser parser = new DefaultParser();
         Options options = new Options();
         options.addOption(
@@ -82,6 +83,15 @@ public class App {
                         .required(false)
                         .build());
 
+        options.addOption(
+                Option.builder("breakOn")
+                        .longOpt("breakOn")
+                        .argName("break-on")
+                        .desc("breakpoints")
+                        .hasArg(true)
+                        .required(false)
+                        .build());
+
         CommandLine cl;
         try {
             cl = parser.parse(options, args);
@@ -102,6 +112,7 @@ public class App {
         String injectSo = cl.getOptionValue("injectso");
         String serial = cl.getOptionValue("serial");
         String activityName = cl.getOptionValue("ac");
+        String breakPoints = cl.getOptionValue("breakOn");
         ArtInjector artInjector;
 
         if (!Utils.checkAdbProcess() && !cl.hasOption("adb")) {
@@ -111,6 +122,9 @@ public class App {
             artInjector = new ArtInjector();
         }
 
+        if (breakPoints != null){
+
+        }
         if (cl.hasOption("a")) {
             try {
                 String appAbi = artInjector.getAppAbi(serial, packageName, 30 * 1000);
@@ -136,7 +150,7 @@ public class App {
                     soFiles[i] = new File(soPaths[i]);
                 }
                 try {
-                    artInjector.inject(serial, packageName, soFiles, 30 * 1000);
+                    artInjector.inject(serial, packageName, soFiles, breakPoints, 30 * 1000);
                 } catch (ArtInjectException e) {
                     System.err.println("[Error] ErrorInfo: " + e.getMessage());
                     System.exit(-1);
