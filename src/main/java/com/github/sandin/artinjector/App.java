@@ -17,7 +17,7 @@ public class App {
 
     public static void main(String[] args) throws ArtInjectException {
         System.out.println("[Success] Android VM Injector v1.0");
-        System.out.println("[Success] OS is :" + Utils.getOsName());
+        System.out.println("[Success] OS is : " + Utils.getOsName());
         DefaultParser parser = new DefaultParser();
         Options options = new Options();
         options.addOption(
@@ -115,16 +115,13 @@ public class App {
         String breakPoints = cl.getOptionValue("breakOn");
         ArtInjector artInjector;
 
-        if (!Utils.checkAdbProcess() && !cl.hasOption("adb")) {
-            System.out.println("[Success] Adb Path is : " + adbPath);
+        if (!Utils.checkAdbProcess(Utils.getOsName()) && !cl.hasOption("adb")) {
+            System.out.println("[Success] Use adb.exe in System Processes");
             artInjector = new ArtInjector(adbPath);
         } else {
             artInjector = new ArtInjector();
         }
 
-        if (breakPoints != null){
-
-        }
         if (cl.hasOption("a")) {
             try {
                 String appAbi = artInjector.getAppAbi(serial, packageName, 30 * 1000);
@@ -143,7 +140,8 @@ public class App {
                 String[] soPaths = injectSo.split(",");
                 System.out.println(Arrays.toString(soPaths));
                 if (!Utils.checkSoPaths(soPaths)) {
-                    return;
+                    System.out.println("[ErrorCode]: " + ErrorCodes.SOFILE_NOT_EXIST);
+                    System.exit(-1);
                 }
                 File[] soFiles = new File[soPaths.length];
                 for (int i = 0; i < soFiles.length; i++) {

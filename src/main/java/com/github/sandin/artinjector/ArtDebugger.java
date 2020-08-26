@@ -152,15 +152,11 @@ public class ArtDebugger {
 
         Value invokeResult = null;
         try {
-            for (Value value : methodArgs) {
-                List<Value> methodArg = new ArrayList<>();
-                methodArg.add(value);
-                invokeResult =
-                        cls.invokeMethod(thread, method, methodArg, options); // System.load(libpath);
-                result.setResult(invokeResult);
-                System.out.println(
-                        "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
-            }
+            invokeResult =
+                    cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
+            result.setResult(invokeResult);
+            System.out.println(
+                    "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
         } catch (InvocationException e) {
             System.out.println("[ErrorCode]: " + ErrorCodes.LOAD_SO_FAIL);
             System.err.println("[Error] invoke method fail, exception: " + e);

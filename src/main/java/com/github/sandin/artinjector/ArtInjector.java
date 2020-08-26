@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import com.sun.jdi.ThreadReference;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -28,7 +27,6 @@ public class ArtInjector {
     private static String adbShell(IDevice device, String[] command) {
         CountDownLatch latch = new CountDownLatch(1);
         CollectingOutputReceiver receiver = new CollectingOutputReceiver(latch);
-
         try {
             String cmd = String.join(" ", command);
             System.out.println("[Success] adb shell " + cmd);
@@ -91,34 +89,14 @@ public class ArtInjector {
      * @param packageName package name of application
      * @param soFiles     so files
      * @param timeout     wait timeout
-     * @return success/fail
      * @throws ArtInjectException
      */
-    public boolean inject(String serial, String packageName, File[] soFiles, String breakPoints, long timeout)
+    public void inject(String serial, String packageName, File[] soFiles, String breakPoints, long timeout)
             throws ArtInjectException {
 
         IDevice device = getDevice(serial, timeout);
 
-        //TODO root devices
-        try {
-            device.root();
-            if (device.isRoot()) {
-                String[] openClientCommend = new String[]{
-                        "setprop ro.debuggable 1"
-                };
-                adbShell(device, openClientCommend);
-            }
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        } catch (AdbCommandRejectedException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ShellCommandUnresponsiveException e) {
-            e.printStackTrace();
-        }
-
-
+        //TODO root
         Client client = findClient(device, packageName, timeout);
         if (client == null) {
             System.out.println("[ErrorCode]: " + ErrorCodes.CANT_GET_CLIENT);
@@ -126,13 +104,15 @@ public class ArtInjector {
                     "Can not get client, make sure this application is debuggable and is running, packageName="
                             + packageName);
         }
+
+        String appAbi = client.getClientData().getAbi();
         System.out.println(
                 "[Success] found app, packageName="
                         + client.getClientData().getPackageName()
                         + ", pid="
                         + client.getClientData().getPid()
                         + ", abi="
-                        + client.getClientData().getAbi());
+                        + appAbi);
 
         // Push so file into device
         String[] soRemotePaths = new String[soFiles.length];
@@ -155,6 +135,12 @@ public class ArtInjector {
                             + soFile.getAbsolutePath()
                             + ", remote file: "
                             + soRemotePath);
+        }
+
+        //check abi
+        boolean checkResult = checkAbi(device, appAbi, soRemotePaths);
+        if (!checkResult) {
+            throw new ArtInjectException("The architecture of the application and so does not match");
         }
 
         // Attach app as JDWP Debugger
@@ -224,13 +210,14 @@ public class ArtInjector {
                     if (event instanceof ArtDebugger.BreakpointEvent
                             && future[0] == null
                             && "main".equals(thread.name())) {
-                        future[0] =
-                                artDebugger.evaluateMethod(
-                                        event.getEvaluateContext(),
-                                        INVOKE_LOAD_METHOD[0],
-                                        INVOKE_LOAD_METHOD[1],
-                                        soRemotePaths);
-
+                        for (String soRemotePath : soRemotePaths) {
+                            future[0] =
+                                    artDebugger.evaluateMethod(
+                                            event.getEvaluateContext(),
+                                            INVOKE_LOAD_METHOD[0],
+                                            INVOKE_LOAD_METHOD[1],
+                                            new String[]{soRemotePath});
+                        }
                         latch.countDown();
                         return true;
                     }
@@ -260,16 +247,21 @@ public class ArtInjector {
             throw new ArtInjectException(
                     "Evaluate java code throw exception, error=" + result.getError());
         }
-        return true;
     }
 
     private void ensureAndroidDebugBridge() throws ArtInjectException {
         if (mAndroidDebugBridge == null) {
             try {
 
-                //TODO
+                //check port
+                int debugPort = 9700;
+                while (!Utils.checkPort(debugPort)) {
+                    debugPort++;
+                }
+
                 DdmPreferences.setDebugPortBase(9600);
-                DdmPreferences.setSelectedDebugPort(9700);
+                DdmPreferences.setSelectedDebugPort(debugPort);
+                System.out.println("[Success] UsePort is : " + debugPort);
                 AndroidDebugBridge.disconnectBridge();
                 AndroidDebugBridge.terminate();
                 AndroidDebugBridge.init(true, false, ImmutableMap.of());
@@ -421,6 +413,24 @@ public class ArtInjector {
                             + packageName);
         }
         return client.getClientData().getAbi();
+    }
+
+
+    private boolean checkAbi(IDevice device, String appAbi, String[] soRemotePaths) {
+        for (String soRemotePath : soRemotePaths) {
+            String checkResult = adbShell(device, new String[]{"file " + soRemotePath});
+            int soAbiIndex = checkResult.indexOf("bit");
+            if (soAbiIndex != -1) {
+                String soAbi = checkResult.substring(soAbiIndex - 3, soAbiIndex - 1);
+                String clientAbi = appAbi.substring(0, 2);
+                String fileName = soRemotePath.substring(soRemotePath.lastIndexOf("/") + 1);
+                if (!soAbi.equals(clientAbi)) {
+                    System.out.println("[ErrorInfo]: " + fileName + " is " + soAbi + "-bit" + " but the application is " + clientAbi + "-bit");
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
 }
