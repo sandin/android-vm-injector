@@ -204,45 +204,42 @@ public class ArtDebugger {
         mEventMonitorThreadRunning = true;
         mEventMonitorThread =
                 new Thread(
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                assertVirtualMachine();
-                                EventQueue eventQueue = mVirtualMachine.eventQueue();
-                                boolean vmExit = false;
+                        () -> {
+                            assertVirtualMachine();
+                            EventQueue eventQueue = mVirtualMachine.eventQueue();
+                            boolean vmExit = false;
 
-                                while (mEventMonitorThreadRunning && !vmExit) {
-                                    try {
-                                        EventSet eventSet = eventQueue.remove();
-                                        EventIterator eventIterator = eventSet.eventIterator();
-                                        while (eventIterator.hasNext()) {
-                                            com.sun.jdi.event.Event event =
-                                                    eventIterator.nextEvent();
-                                            if (event instanceof VMDeathEvent) {
-                                                vmExit = true;
-                                            } else if (event instanceof VMDisconnectEvent) {
-                                                vmExit = true;
-                                            } else if (event instanceof MethodEntryEvent) {
-                                                processMethodEntryEvent((MethodEntryEvent) event);
-                                            } else if (event
-                                                    instanceof com.sun.jdi.event.BreakpointEvent) {
-                                                processBreakpointEventEvent(
-                                                        (com.sun.jdi.event.BreakpointEvent) event);
-                                            }
-                                            eventSet.resume();
+                            while (mEventMonitorThreadRunning && !vmExit) {
+                                try {
+                                    EventSet eventSet = eventQueue.remove();
+                                    EventIterator eventIterator = eventSet.eventIterator();
+                                    while (eventIterator.hasNext()) {
+                                        com.sun.jdi.event.Event event =
+                                                eventIterator.nextEvent();
+                                        if (event instanceof VMDeathEvent) {
+                                            vmExit = true;
+                                        } else if (event instanceof VMDisconnectEvent) {
+                                            vmExit = true;
+                                        } else if (event instanceof MethodEntryEvent) {
+                                            processMethodEntryEvent((MethodEntryEvent) event);
+                                        } else if (event
+                                                instanceof com.sun.jdi.event.BreakpointEvent) {
+                                            processBreakpointEventEvent(
+                                                    (com.sun.jdi.event.BreakpointEvent) event);
                                         }
-                                    } catch (Throwable e) {
-                                        e.printStackTrace();
+                                        eventSet.resume();
                                     }
-
-                                    try {
-                                        Thread.sleep(100);
-                                    } catch (InterruptedException ignore) {
-
-                                    }
+                                } catch (Throwable e) {
+                                    e.printStackTrace();
                                 }
-                                System.out.println("[Success] event monitor thread exit");
+
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ignore) {
+
+                                }
                             }
+                            System.out.println("[Success] event monitor thread exit");
                         });
         mEventMonitorThread.start();
     }

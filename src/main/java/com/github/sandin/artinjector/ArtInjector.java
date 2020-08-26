@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.sun.jdi.ThreadReference;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -91,9 +93,21 @@ public class ArtInjector {
      * @param timeout     wait timeout
      * @throws ArtInjectException
      */
-    public void inject(String serial, String packageName, File[] soFiles, String breakPoints, long timeout)
+    public boolean inject(String serial, String packageName, File[] soFiles, String breakPoints, long timeout)
             throws ArtInjectException {
-
+        long startTime = System.currentTimeMillis();
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                long nowTime = System.currentTimeMillis();
+                if (nowTime - startTime > timeout) {
+                    System.out.println("[ErrorCode]: " + ErrorCodes.INJECT_TIMEOUT);
+                    System.out.println("[ErrorInfo] : timeout!");
+                    System.exit(-1);
+                }
+            }
+        }, 0, 1000);
         IDevice device = getDevice(serial, timeout);
 
         //TODO root
@@ -247,6 +261,7 @@ public class ArtInjector {
             throw new ArtInjectException(
                     "Evaluate java code throw exception, error=" + result.getError());
         }
+        return true;
     }
 
     private void ensureAndroidDebugBridge() throws ArtInjectException {

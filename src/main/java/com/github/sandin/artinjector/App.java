@@ -115,11 +115,12 @@ public class App {
         String breakPoints = cl.getOptionValue("breakOn");
         ArtInjector artInjector;
 
-        if (!Utils.checkAdbProcess(Utils.getOsName()) && !cl.hasOption("adb")) {
+        if (Utils.checkAdbProcess(Utils.getOsName()) && !cl.hasOption("adb")) {
             System.out.println("[Success] Use adb.exe in System Processes");
-            artInjector = new ArtInjector(adbPath);
-        } else {
             artInjector = new ArtInjector();
+        } else {
+            System.out.println("[Success] adb path is : " + adbPath);
+            artInjector = new ArtInjector(adbPath);
         }
 
         if (cl.hasOption("a")) {
@@ -147,8 +148,10 @@ public class App {
                 for (int i = 0; i < soFiles.length; i++) {
                     soFiles[i] = new File(soPaths[i]);
                 }
+                long timeout = 30 * 1000;
                 try {
-                    artInjector.inject(serial, packageName, soFiles, breakPoints, 30 * 1000);
+                    artInjector.inject(serial, packageName, soFiles, breakPoints, timeout);
+
                 } catch (ArtInjectException e) {
                     System.err.println("[Error] ErrorInfo: " + e.getMessage());
                     System.exit(-1);
