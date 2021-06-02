@@ -98,32 +98,52 @@ public class ArtDebugger {
      * Invoke a method in remote VM
      *
      * @param evaluateContext context(thread)
-     * @param className       class name
+     * @param objectReference object Reference
      * @param methodName      method name
      * @param args            method args
      * @return result
      */
     public EvaluateResult evaluateMethod(
-            EvaluateContext evaluateContext, String className, String methodName, Object[] args) {
+            EvaluateContext evaluateContext, String methodName, String methodSignature, ObjectReference objectReference, Object[] args) {
+        final ClassType cls = (ClassType) objectReference.referenceType();
+        return evaluateMethod(evaluateContext, cls, methodName, methodSignature, objectReference, args);
+    }
+
+    public EvaluateResult evaluateStaticMethod(
+            EvaluateContext evaluateContext, String className, String methodName, String methodSignature, Object[] args) {
         EvaluateResult result = new EvaluateResult();
-
-        assertVirtualMachine();
-
-        List<ReferenceType> classes = mVirtualMachine.classesByName(className);
-        ClassType cls = classes.size() > 0 ? (ClassType) classes.get(0) : null;
+        ClassType cls = findClass(mVirtualMachine, className);
         if (cls == null) {
             result.setError("Can not find class " + className);
             return result;
         }
         System.out.println("[Success] Found class: " + cls.name() + ", " + cls.classLoader());
+        return evaluateMethod(evaluateContext, cls, methodName, methodSignature, null, args);
+    }
 
-        List<Method> methods = cls.methodsByName(methodName);
-        Method method = methods.size() > 0 ? methods.get(0) : null;
+    /**
+     * Invoke a method in remote VM
+     *
+     * @param evaluateContext context(thread)
+     * @param cls             class type
+     * @param methodName      method name
+     * @param args            method args
+     * @return result
+     */
+    private EvaluateResult evaluateMethod(
+            EvaluateContext evaluateContext, ClassType cls, String methodName, String methodSignature, ObjectReference objectReference, Object[] args) {
+        assertVirtualMachine();
+        EvaluateResult result = new EvaluateResult();
+
+        Method method = cls.concreteMethodByName(methodName, methodSignature);
         if (method == null) {
-            result.setError("Can not find method " + className + "." + methodName);
+            result.setError("Can not find method, class=" + cls.name() + ", method=" + methodName + ", signature" + methodSignature );
+            for (Method m : cls.methods()) {
+                System.out.println("[Warning] available method, class=" + m.declaringType().name() + " method=" + m.name() + " signature=" + m.signature());
+            }
             return result;
         }
-        System.out.println("[Success] Found method: " + method.name() + " " + method.signature());
+        System.out.println("[Success] Found method: class=" + method.declaringType().name() + " method=" + method.name() + " signature=" + method.signature());
 
         List<Value> methodArgs = new ArrayList<>();
         int options = ClassType.INVOKE_SINGLE_THREADED;
@@ -132,6 +152,11 @@ public class ArtDebugger {
                 methodArgs.add(mVirtualMachine.mirrorOf((String) arg));
             } else if (arg instanceof Boolean) {
                 methodArgs.add(mVirtualMachine.mirrorOf((Boolean) arg));
+            } else if (arg instanceof Value) {
+                methodArgs.add((Value) arg);
+            } else if (arg == null) {
+                methodArgs.add(null);
+                // TODO:
             } else {
                 throw new IllegalArgumentException(
                         "unsupported args type: " + arg); // TODO: support other primitive type
@@ -139,9 +164,11 @@ public class ArtDebugger {
         }
         System.out.println(
                 "[Success] try to invoke method: className="
-                        + className
+                        + cls.name()
                         + ", methodName="
                         + methodName
+                        + ", methodSignature="
+                        + methodSignature
                         + ", args="
                         + Arrays.toString(args));
         ThreadReference thread = evaluateContext.getThread();
@@ -152,9 +179,16 @@ public class ArtDebugger {
 
         Value invokeResult = null;
         try {
-            invokeResult =
-                    cls.invokeMethod(thread, method, methodArgs, options); // System.load(libpath);
-            result.setResult(invokeResult);
+            if (methodName.equals("<init>")) { // init method
+                invokeResult = cls.newInstance(thread, method, methodArgs, options);
+                result.setResult(invokeResult);
+            } else if (objectReference != null) { // member method
+                invokeResult = objectReference.invokeMethod(thread, method, methodArgs, options);
+                result.setResult(invokeResult);
+            } else { // static method
+                invokeResult = cls.invokeMethod(thread, method, methodArgs, options);
+                result.setResult(invokeResult);
+            }
             System.out.println(
                     "[Success] invoke method result: " + result + ", t=" + System.currentTimeMillis());
         } catch (InvocationException e) {
@@ -163,6 +197,7 @@ public class ArtDebugger {
             ObjectReference exception = e.exception();
             e.printStackTrace();
             ArtInjectException remoteException = parseRemoteException(thread, exception);
+            remoteException.printStackTrace();
             result.setError(remoteException.getMessage());
         } catch (ClassNotLoadedException e) {
             e.printStackTrace();
@@ -533,6 +568,18 @@ public class ArtDebugger {
     public static class EvaluateResult {
         private Object mObject = null;
         private String mError = null;
+
+        public EvaluateResult() {
+        }
+
+        public EvaluateResult(Object object, String error) {
+            mObject = object;
+            mError = error;
+        }
+
+        public boolean hasError() {
+            return mError != null;
+        }
 
         public Object getResult() {
             return mObject;

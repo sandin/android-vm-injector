@@ -43,6 +43,45 @@ $ artinjector -i <injecto_so> -p <package_name>
 ```
 --breakOn android.app.Activity.onCreate,android.os.Looper.myLooper
 ```
+
+
+### .apk注入
+
+```
+$ artinjector -i <apk_file> -p <package_name>
+```
+
+NOTE: APK的注入不支持自定义的 breakOn 断点参数，它只支持在 `Application.attachBaseContext()` 断点。
+
+该工具支持直接注入一个APK文件，包括其中的java代码和so代码，支持正常调用任意的Android API和JNI API，支持任何注入任何Hook框架，包括Hook Java代码或者Hook cpp代码。
+
+APK可以是一个正常的APK文件，只需要其中包含一个固定的入口函数 `com.github.sandin.artinjector.entry()` ，该函数会在启动的时候注入到目标JVM中执行。
+
+```java
+package com.github.sandin.artinjector;
+
+import android.app.Application;
+import android.util.Log;
+
+public class EntryPoint {
+  static {
+    System.loadLibrary("native-lib");
+  }
+
+  public static native String stringFromJNI();
+
+  public static int entry(Application application, ClassLoader dexClassLoader, ClassLoader originClassLoader) {
+    Log.i("ArtInjector", "3 entry, application=" + application + " dexClassLoader=" + dexClassLoader + ", originClassLoader=" + originClassLoader);
+    
+    // just do what you want
+
+      
+  }
+
+}
+```
+
+
 ### 检测app架构(32/64 bit)
 ```
 $ artinjector -p <package_name> -a
