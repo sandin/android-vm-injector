@@ -1,4 +1,4 @@
-# Android Injector v0.0.5
+# Android Injector
 
 ## 简介
 
@@ -48,12 +48,12 @@ $ artinjector -i <injecto_so> -p <package_name>
 ### .apk注入
 
 ```
-$ artinjector -i <apk_file> -p <package_name>
+$ artinjector -i <apk_file> -p <package_name> --launch
 ```
 
-NOTE: APK的注入不支持自定义的 breakOn 断点参数，它只支持在 `Application.attachBaseContext()` 断点。
+NOTE: APK的注入不支持自定义的 breakOn 断点参数，它只支持在 `Application.attachBaseContext()` 断点, 并且只支持 --launch 模式。
 
-该工具支持直接注入一个APK文件，包括其中的java代码和so代码，支持正常调用任意的Android API和JNI API，支持任何注入任何Hook框架，包括Hook Java代码或者Hook cpp代码。
+该工具支持直接注入一个APK文件，包括其中的java代码和so代码，支持正常调用任意的Android API和JNI API，支持注入任何Hook框架，包括Hook Java代码或者Hook cpp代码。
 
 APK可以是一个正常的APK文件，只需要其中包含一个固定的入口函数 `com.github.sandin.artinjector.entry()` ，该函数会在启动的时候注入到目标JVM中执行。
 
@@ -122,3 +122,6 @@ BREAKPOINTS_HAVE_ERROR = 11;            //输入的断点格式错误
   2. 使用--adbPath <adb_path>来指定adb路径
   3. 启动adb服务
   
+## 类似工具
+* https://github.com/ikoz/jdwp-lib-injector
+* https://github.com/IOActive/jdwp-shellifier

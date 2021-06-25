@@ -396,7 +396,7 @@ public class ArtInjector {
                     stackFrame = frame;
                     for (LocalVariable localVariable : stackFrame.visibleVariables()) {
                         //System.out.println("localVariable: " +  localVariable + ", type: " + localVariable.type().name());
-                        if (localVariable.type().name().equals("android.content.Context")) {
+                        if (localVariable.typeName().equals("android.content.Context")) {
                             contextRef = (ObjectReference) frame.getValue(localVariable);
                             //System.out.println("contextRef: " +  contextRef);
                             break;
@@ -404,7 +404,7 @@ public class ArtInjector {
                     }
                 }
             }
-        } catch (IncompatibleThreadStateException | AbsentInformationException | ClassNotLoadedException e) {
+        } catch (IncompatibleThreadStateException | AbsentInformationException e) {
             e.printStackTrace();
         }
         if (stackFrame == null) {
