@@ -4,6 +4,8 @@
 
 本工具提供了Android应用运行时注入.so文件并拉起的功能，支持root机注入release、debuggable应用及非root机注入debuggable应用
 
+> 本应用不支持和Android studio同时使用,使用前请先关闭Android studio.
+
 ## 功能 Features
 
 1. 检测Android应用的架构
