@@ -47,11 +47,16 @@ public class ArtInjector {
         mAdbPath = null;
     }
 
-    private static String adbShell(IDevice device, String[] command) {
+    private static String adbShell(IDevice device, String[] command, boolean asRoot) {
         CountDownLatch latch = new CountDownLatch(1);
         CollectingOutputReceiver receiver = new CollectingOutputReceiver(latch);
         try {
-            String cmd = String.join(" ", command);
+            String cmd;
+            if (asRoot) {
+                cmd = "su -c \"" + String.join(" ", command) + "\"";
+            } else {
+                cmd = String.join(" ", command);
+            }
             System.out.println("[Success] adb shell " + cmd);
             device.executeShellCommand(cmd, receiver, 2L, TimeUnit.SECONDS);
         } catch (Exception var6) {
@@ -65,6 +70,10 @@ public class ArtInjector {
         }
 
         return receiver.getOutput().trim();
+    }
+
+    private static String adbShell(IDevice device, String[] command) {
+        return adbShell(device, command, false);
     }
 
     //Launch Application
@@ -178,10 +187,10 @@ public class ArtInjector {
         }
 
         //check abi
-        boolean checkResult = checkAbi(device, appAbi, soRemotePaths);
-        if (!checkResult) {
-            throw new ArtInjectException("The architecture of the application and so does not match");
-        }
+        //boolean checkResult = checkAbi(device, appAbi, soRemotePaths);
+        //if (!checkResult) {
+        //    throw new ArtInjectException("The architecture of the application and so does not match");
+        //}
 
         // Attach app as JDWP Debugger
         int port = client.getDebuggerListenPort();
@@ -657,21 +666,13 @@ public class ArtInjector {
                 };
         String out = adbShell(device, cmd);
         if (out.trim().length() > 0) {
-            // try again as root
-            boolean rooted = device.isRoot();
-            if (!rooted) {
-                rooted = device.root(); // try to get root permission
-            }
-            if (rooted) {
-                adbShell(device, new String[]{"setenforce", "0"});
-                out = adbShell(device, new String[]{"cp", "/data/local/tmp/" + filename, remotePath});
-                if (out.trim().length() > 0) {
-                    throw new Exception(out.trim()); // error
-                }
-                adbShell(device, new String[]{"chmod", "777", remotePath});
-            } else {
+            System.out.println("[Warning] " + packageName + " package is not debuggable, try push file again as root");
+            adbShell(device, new String[]{"setenforce", "0"}, true);
+            out = adbShell(device, new String[]{"cp", "/data/local/tmp/" + filename, remotePath}, true);
+            if (out.trim().length() > 0) {
                 throw new Exception(out.trim()); // error
             }
+            adbShell(device, new String[]{"chmod", "777", remotePath}, true);
         }
 
         System.out.println(
