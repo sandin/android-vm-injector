@@ -1,13 +1,13 @@
 plugins {
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
+
+mainClassName = 'com.github.sandin.artinjector.App'
 
 group 'com.github.sandin'
-version '0.0.6'
+version '0.0.7'
 
-sourceSets {
-    mainClassName = 'com.github.sandin.artinjector.App'
-}
 repositories {
     maven {
         url "https://maven.google.com/"
@@ -25,17 +25,3 @@ dependencies {
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
-
-//打包相关
-jar {
-    manifestContentCharset 'utf-8'
-    metadataCharset 'utf-8'
-    manifest {
-        attributes 'Main-Class': 'com.github.sandin.artinjector.App'
-    }
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-}
-
-

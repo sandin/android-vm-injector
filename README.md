@@ -122,6 +122,10 @@ CANT_GET_ADB = 10;                      //无法创建调试桥
 BREAKPOINTS_HAVE_ERROR = 11;            //输入的断点格式错误
 ```
 
+## 编译 Builder
+
+执行 gradle `shadowJar` task, 输出目录: `build/lib/artinjector-<version>-all.jar`
+
 ## 常见问题 Tips
 * 如果一直在等待断点阶段(wait breakpoints)，尝试切出应用再切回应用
 * 无法创建调试桥的可能原因：没有将本地的adb配置到环境变量,未手动指定本地的adb路径及未启动adb服务，解决方案：
